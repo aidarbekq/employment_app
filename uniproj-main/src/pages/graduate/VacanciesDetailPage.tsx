@@ -7,11 +7,9 @@ import {
   MapPin,
   DollarSign,
   ClipboardList,
-  CheckCircle,
 } from "lucide-react";
 
 import api from "@/services/api";
-import Button from "@/components/common/Button";
 import {
   Card,
   CardContent,
@@ -40,8 +38,6 @@ const GraduateVacancyDetailPage: React.FC = () => {
 
   const [vacancy, setVacancy] = useState<Vacancy | null>(null);
   const [loading, setLoading] = useState(true);
-  const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -55,40 +51,40 @@ const GraduateVacancyDetailPage: React.FC = () => {
     fetch();
   }, [id]);
 
-  const handleApply = async () => {
-    try {
-      setApplying(true);
-      await api.post("vacancies/apply/", { vacancy_id: id });
-      setApplied(true);
-    } catch {
-      alert(t("vacancy.errorApply"));
-    } finally {
-      setApplying(false);
-    }
-  };
-
   if (loading) {
-    return <p className="text-center mt-6 text-gray-500">{t("common.loading")}</p>;
+    return (
+      <p className="text-center mt-6 text-gray-500">
+        {t("common.loading")}
+      </p>
+    );
   }
 
   if (!vacancy) {
-    return <p className="text-center mt-6 text-red-600">{t("vacancy.errorLoad")}</p>;
+    return (
+      <p className="text-center mt-6 text-red-600">
+        {t("vacancy.errorLoad")}
+      </p>
+    );
   }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       <h1 className="text-2xl font-semibold text-gray-800">
-        
+        {vacancy.title}
       </h1>
 
       <Card>
-          <CardHeader>
-          <CardTitle>{t("vacancy.title")}: {vacancy.title}</CardTitle>
+        <CardHeader>
+          <CardTitle>
+            {t("vacancy.title")}: {vacancy.title}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-gray-700 text-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-medium text-gray-900 mb-1">{t("employer.company_name")}</h4>
+              <h4 className="font-medium text-gray-900 mb-1">
+                {t("employer.company_name")}
+              </h4>
               <p className="flex items-center">
                 <Briefcase className="h-4 w-4 mr-1 text-gray-500" />
                 {vacancy.employer?.company_name}
@@ -96,7 +92,9 @@ const GraduateVacancyDetailPage: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="font-medium text-gray-900 mb-1">{t("vacancy.location")}</h4>
+              <h4 className="font-medium text-gray-900 mb-1">
+                {t("vacancy.location")}
+              </h4>
               <p className="flex items-center">
                 <MapPin className="h-4 w-4 mr-1 text-gray-500" />
                 {vacancy.location}
@@ -104,7 +102,9 @@ const GraduateVacancyDetailPage: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="font-medium text-gray-900 mb-1">{t("vacancy.salary")}</h4>
+              <h4 className="font-medium text-gray-900 mb-1">
+                {t("vacancy.salary")}
+              </h4>
               <p className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-1 text-gray-500" />
                 {vacancy.salary || t("common.notSpecified")}
@@ -112,7 +112,9 @@ const GraduateVacancyDetailPage: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="font-medium text-gray-900 mb-1">{t("vacancy.createdAt")}</h4>
+              <h4 className="font-medium text-gray-900 mb-1">
+                {t("vacancy.createdAt")}
+              </h4>
               <p className="flex items-center">
                 <Calendar className="h-4 w-4 mr-1 text-gray-500" />
                 {new Date(vacancy.created_at).toLocaleDateString()}
@@ -121,12 +123,16 @@ const GraduateVacancyDetailPage: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="font-medium text-gray-900 mb-1">{t("vacancy.description")}</h4>
+            <h4 className="font-medium text-gray-900 mb-1">
+              {t("vacancy.description")}
+            </h4>
             <p>{vacancy.description}</p>
           </div>
 
           <div>
-            <h4 className="font-medium text-gray-900 mb-1">{t("vacancy.requirements")}</h4>
+            <h4 className="font-medium text-gray-900 mb-1">
+              {t("vacancy.requirements")}
+            </h4>
             <p className="flex items-start">
               <ClipboardList className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
               {vacancy.requirements || "—"}
@@ -134,20 +140,9 @@ const GraduateVacancyDetailPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      <div className="text-center">
-        {applied ? (
-          <p className="inline-flex items-center text-green-600 font-medium">
-            <CheckCircle className="h-5 w-5 mr-1" /> {t("vacancy.applied")}
-          </p>
-        ) : (
-          <Button onClick={handleApply} disabled={applying}>
-            {applying ? t("vacancy.applying") : t("vacancy.apply")}
-          </Button>
-        )}
-      </div>
     </div>
   );
 };
 
 export default GraduateVacancyDetailPage;
+
