@@ -1,0 +1,28 @@
+# Dockerfile.backend
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# после WORKDIR /app
+RUN mkdir -p media staticfiles \
+    && chown -R root:root media staticfiles
+
+
+# Копируем только requirements.txt и ставим все зависимости + gunicorn
+COPY employment_system-main/requirements.txt .
+# Добавляем gunicorn в установку
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
+
+# Копируем весь код
+COPY employment_system-main/ .
+
+# При старте: миграции, сбор статики и запуск gunicorn
+CMD ["sh", "-c", "\
+    python manage.py migrate && \
+    python manage.py collectstatic --noinput && \
+    gunicorn employment_system.wsgi:application --bind 0.0.0.0:8000 \
+"]
+
