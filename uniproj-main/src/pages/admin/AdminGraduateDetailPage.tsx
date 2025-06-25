@@ -130,19 +130,19 @@ const AdminGraduateDetailPage: React.FC = () => {
         <CardContent className="space-y-4">
           <Input
             name="first_name"
-            label={t("user.first_name")}
+            label={t("auth.firstName")}
             value={form.first_name}
             onChange={handleChange}
           />
           <Input
             name="last_name"
-            label={t("user.last_name")}
+            label={t("auth.lastName")}
             value={form.last_name}
             onChange={handleChange}
           />
           <Input
             name="email"
-            label={t("user.email")}
+            label={t("auth.email")}
             value={form.email}
             onChange={handleChange}
             type="email"
@@ -212,3 +212,4 @@ const AdminGraduateDetailPage: React.FC = () => {
 };
 
 export default AdminGraduateDetailPage;
+
