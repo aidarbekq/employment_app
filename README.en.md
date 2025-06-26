@@ -169,4 +169,3 @@ Please write tests for new endpoints or React components.
 
 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
-русский вариант сделать и как сделать чтлбы можно было менять язык
