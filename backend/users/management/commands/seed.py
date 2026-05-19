@@ -296,7 +296,7 @@ ALUMNI: list[dict[str, Any]] = [
         "is_employed": True,
         "employer_username": "employer_tumar_tech",
         "position": "Fullstack-разработчик",
-        "skills": "Django, React, TypeScript, SQLite/PostgreSQL, Git",
+        "skills": "Django, React, TypeScript, PostgreSQL, Git",
     },
     {
         "username": "alumni_dinara_sarieva",

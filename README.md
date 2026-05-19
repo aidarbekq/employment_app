@@ -7,7 +7,7 @@
 ## Стек
 
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS
-- **Backend:** Django, Django REST Framework, Simple JWT, SQLite
+- **Backend:** Django, Django REST Framework, Simple JWT, PostgreSQL
 - **Proxy:** Nginx
 - **Запуск:** Docker Compose v2
 
@@ -56,7 +56,16 @@ docker compose up -d --build
 Frontend: http://localhost/
 Django admin: http://localhost/admin/
 API: http://localhost/api/
+Healthcheck: http://localhost/api/health/
 Swagger: http://localhost/api/docs/
+```
+
+Контейнеры:
+
+```text
+db       PostgreSQL
+backend  Django + Gunicorn
+nginx    React build + reverse proxy
 ```
 
 ## Seed demo-данных
@@ -94,14 +103,22 @@ docker compose exec backend python manage.py seed --skip-resumes
 
 ## Локальный запуск backend
 
+Сначала подними PostgreSQL из Docker Compose:
+
+```bash
+docker compose up -d db
+```
+
+Потом запусти backend локально:
+
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python manage.py migrate
-python manage.py seed --clear
-python manage.py runserver
+DB_HOST=localhost python manage.py migrate
+DB_HOST=localhost python manage.py seed --clear
+DB_HOST=localhost python manage.py runserver
 ```
 
 ## Локальный запуск frontend
@@ -117,8 +134,36 @@ npm run dev
 ```bash
 npm run lint
 npx tsc -b
+npm audit
 npm run build
 ```
+
+## npm audit
+
+Проверить уязвимости frontend-зависимостей:
+
+```bash
+cd frontend
+npm audit
+```
+
+Автоматически применить безопасные совместимые обновления:
+
+```bash
+npm audit fix
+```
+
+Если после этого уязвимости остались, смотри отчёт `npm audit` и обновляй конкретные пакеты вручную. Команду `npm audit fix --force` используй только после проверки, потому что она может поставить major-версии с breaking changes. После любых обновлений обязательно запусти:
+
+```bash
+npm run lint
+npx tsc -b
+npm run build
+```
+
+## Code splitting
+
+В `frontend/src/App.tsx` настроен route-based code splitting через `React.lazy()` и `Suspense`. Это уменьшает первый JavaScript bundle: страницы админа, работодателя и выпускника загружаются отдельными chunks только при переходе на соответствующий route.
 
 ## Переменные окружения
 
@@ -130,15 +175,38 @@ DEBUG=False
 ALLOWED_HOSTS=localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
 CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
+
+DB_NAME=employment_db
+DB_USER=employment_user
+DB_PASSWORD=employment_password
+DB_HOST=db
+DB_PORT=5432
+DB_CONN_MAX_AGE=60
+DB_CONN_HEALTH_CHECKS=True
 ```
 
 `.env` не должен попадать в git.
 
+## Healthcheck
+
+Backend healthcheck доступен по адресу:
+
+```text
+GET /api/health/
+```
+
+Успешный ответ:
+
+```json
+{"status": "ok", "database": "ok"}
+```
+
+Если PostgreSQL недоступен, endpoint возвращает HTTP `503`.
+
 ## Рекомендации для продакшена
 
-- заменить SQLite на PostgreSQL;
+- заменить демо-пароли и `SECRET_KEY`;
 - вынести секреты в защищённое хранилище или secrets manager;
 - настроить HTTPS и production CORS/CSRF origins;
-- добавить healthcheck endpoint для backend;
-- добавить CI pipeline для `python manage.py check`, `npm run lint`, `npx tsc -b`, `npm run build`;
-- настроить code splitting для frontend, потому что production bundle уже больше 500 kB.
+- добавить CI pipeline для `python manage.py check`, `npm run lint`, `npx tsc -b`, `npm audit`, `npm run build`;
+- регулярно обновлять зависимости и проверять bundle size после новых крупных страниц.

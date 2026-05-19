@@ -7,7 +7,7 @@ A monorepo for a department graduate employment tracking system.
 ## Stack
 
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS
-- **Backend:** Django, Django REST Framework, Simple JWT, SQLite
+- **Backend:** Django, Django REST Framework, Simple JWT, PostgreSQL
 - **Proxy:** Nginx
 - **Runtime:** Docker Compose v2
 
@@ -56,7 +56,16 @@ After startup:
 Frontend: http://localhost/
 Django admin: http://localhost/admin/
 API: http://localhost/api/
+Healthcheck: http://localhost/api/health/
 Swagger: http://localhost/api/docs/
+```
+
+Containers:
+
+```text
+db       PostgreSQL
+backend  Django + Gunicorn
+nginx    React build + reverse proxy
 ```
 
 ## Demo data seed
@@ -94,14 +103,22 @@ docker compose exec backend python manage.py seed --skip-resumes
 
 ## Local backend development
 
+Start PostgreSQL from Docker Compose first:
+
+```bash
+docker compose up -d db
+```
+
+Then run the backend locally:
+
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python manage.py migrate
-python manage.py seed --clear
-python manage.py runserver
+DB_HOST=localhost python manage.py migrate
+DB_HOST=localhost python manage.py seed --clear
+DB_HOST=localhost python manage.py runserver
 ```
 
 ## Local frontend development
@@ -117,8 +134,36 @@ Frontend checks:
 ```bash
 npm run lint
 npx tsc -b
+npm audit
 npm run build
 ```
+
+## npm audit
+
+Check frontend dependency vulnerabilities:
+
+```bash
+cd frontend
+npm audit
+```
+
+Apply safe compatible automatic updates:
+
+```bash
+npm audit fix
+```
+
+If vulnerabilities remain, review the `npm audit` report and update specific packages manually. Use `npm audit fix --force` only after reviewing the changes because it can install major versions with breaking changes. After any dependency update, run:
+
+```bash
+npm run lint
+npx tsc -b
+npm run build
+```
+
+## Code splitting
+
+`frontend/src/App.tsx` uses route-based code splitting with `React.lazy()` and `Suspense`. This reduces the initial JavaScript bundle: admin, employer, and graduate pages are loaded as separate chunks only when the user opens the matching route.
 
 ## Environment variables
 
@@ -130,15 +175,38 @@ DEBUG=False
 ALLOWED_HOSTS=localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
 CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
+
+DB_NAME=employment_db
+DB_USER=employment_user
+DB_PASSWORD=employment_password
+DB_HOST=db
+DB_PORT=5432
+DB_CONN_MAX_AGE=60
+DB_CONN_HEALTH_CHECKS=True
 ```
 
 Do not commit `.env`.
 
+## Healthcheck
+
+The backend healthcheck is available at:
+
+```text
+GET /api/health/
+```
+
+Successful response:
+
+```json
+{"status": "ok", "database": "ok"}
+```
+
+If PostgreSQL is unavailable, the endpoint returns HTTP `503`.
+
 ## Production recommendations
 
-- replace SQLite with PostgreSQL;
+- replace demo passwords and `SECRET_KEY`;
 - move secrets to a protected secrets manager;
 - configure HTTPS and production CORS/CSRF origins;
-- add a backend healthcheck endpoint;
-- add CI for `python manage.py check`, `npm run lint`, `npx tsc -b`, and `npm run build`;
-- configure frontend code splitting because the production bundle is already larger than 500 kB.
+- add CI for `python manage.py check`, `npm run lint`, `npx tsc -b`, `npm audit`, and `npm run build`;
+- keep dependencies updated and check bundle size after adding large pages.
