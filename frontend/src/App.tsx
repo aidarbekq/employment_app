@@ -32,11 +32,13 @@ const VacancyEditPage = lazy(() => import('./pages/employer/VacancyEditPage'));
 const AdminDashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
 const AdminGraduatesPage = lazy(() => import('./pages/admin/GraduatesPage'));
 const AdminGraduateDetailPage = lazy(() => import('./pages/admin/AdminGraduateDetailPage'));
+const AdminGraduateCreatePage = lazy(() => import('./pages/admin/AdminGraduateCreatePage'));
 const AdminEmployersPage = lazy(() => import('./pages/admin/EmployersPage'));
 const AdminEmployerDetailPage = lazy(() => import('./pages/admin/AdminEmployerDetailPage'));
 const AdminVacanciesPage = lazy(() => import('./pages/admin/AdminVacanciesPage'));
 const AdminVacancyDetailPage = lazy(() => import('./pages/admin/AdminVacancyDetailPage'));
 const AdminVacancyEditPage = lazy(() => import('./pages/admin/AdminVacancyEditPage'));
+const AdminPartnersPage = lazy(() => import('./pages/admin/PartnersPage'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center text-gray-500">
@@ -80,12 +82,14 @@ function App() {
             <Route path="/admin" element={<DashboardLayout role="admin" />}>
               <Route path="dashboard" element={<AdminDashboardPage />} />
               <Route path="graduates" element={<AdminGraduatesPage />} />
+              <Route path="graduates/create" element={<AdminGraduateCreatePage />} />
               <Route path="graduates/:id" element={<AdminGraduateDetailPage />} />
               <Route path="employers" element={<AdminEmployersPage />} />
               <Route path="employers/:id" element={<AdminEmployerDetailPage />} />
               <Route path="vacancies" element={<AdminVacanciesPage />} />
               <Route path="vacancies/:id" element={<AdminVacancyDetailPage />} />
               <Route path="vacancies/:id/edit" element={<AdminVacancyEditPage />} />
+              <Route path="partners" element={<AdminPartnersPage />} />
             </Route>
 
             {/* Not found */}
