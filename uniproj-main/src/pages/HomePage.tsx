@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import heroImage from '@/assets/hero.jpg';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { BarChart3, Users, Building, ArrowRight } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Card, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+
 
 const HomePage: React.FC = () => {
   const { t } = useTranslation();
@@ -47,7 +49,10 @@ const HomePage: React.FC = () => {
     <div className="animate-fade-in">
       {/* Hero */}
       <section className="relative bg-gradient-to-r from-primary-700 to-primary-900 text-white">
-        <div className="absolute inset-0 bg-[url('https://scontent-hel3-1.xx.fbcdn.net/v/t39.30808-6/484180283_1136202744969487_8270886603001842588_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=833d8c&_nc_ohc=O2aBccBO67YQ7kNvwGnHib5&_nc_oc=AdmXXK9SauFNKRQWFO6IH5sS-5Y40GsInuCdBI4Ek1wkJSgNCxfCYR6jbFTilrvPFwg&_nc_zt=23&_nc_ht=scontent-hel3-1.xx&_nc_gid=lpbaV__NxGulWXSYRFK93g&oh=00_AfOD4OaplFUmjYmReXQbAg0fV6IDOjKhLg4g_z0KnuacHA&oe=685E0FE9')] bg-cover bg-center opacity-20"></div>
+<div
+  className="absolute inset-0 bg-cover bg-center opacity-40"
+  style={{ backgroundImage: `url(${heroImage})` }}
+></div>
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">

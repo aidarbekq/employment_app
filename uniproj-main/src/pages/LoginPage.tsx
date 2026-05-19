@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Mail, Lock, GraduationCap, Loader2 } from "lucide-react";
+import logoUni from "@/assets/logo_uni.png";
 import { Card, CardContent } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { useTranslation } from "react-i18next";
@@ -41,8 +42,7 @@ const LoginPage: React.FC = () => {
   <div
     className="absolute inset-0 opacity-20 z-0 scale-500 bg-no-repeat bg-top bg-cover"
     style={{
-      backgroundImage:
-        'url("https://ricet.kg/assets/front/img/pagebuilder/662a3a04cbfc6.png")',
+      backgroundImage: `url(${logoUni})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     }}

@@ -14,6 +14,14 @@ import { Card, CardContent } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { motion } from "framer-motion";
 
+const logoModules = import.meta.glob("../assets/logo_uni.png", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
+const logoUni = Object.values(logoModules)[0] as string | undefined;
+
 const RegisterPage: React.FC = () => {
   const { t } = useTranslation();
   const { register } = useAuth();
@@ -31,6 +39,9 @@ const RegisterPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isBackgroundAvailable, setIsBackgroundAvailable] = useState(
+    Boolean(logoUni)
+  );
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -61,25 +72,76 @@ const RegisterPage: React.FC = () => {
     }
   };
 
+  const hasBackground = Boolean(logoUni && isBackgroundAvailable);
+
   return (
-    <div className="min-h-screen py-16 bg-gray-50 flex justify-center">
+    <div
+      className={`relative min-h-screen py-16 px-4 sm:px-6 flex justify-center overflow-hidden ${
+        hasBackground
+          ? "bg-gradient-to-r from-primary-700 to-primary-900"
+          : "bg-gray-50"
+      }`}
+    >
+      {hasBackground && (
+        <div
+          className="absolute inset-0 opacity-20 z-0 bg-no-repeat bg-center bg-cover"
+          style={{
+            backgroundImage: `url(${logoUni})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        />
+      )}
+
+      {logoUni && (
+        <img
+          src={logoUni}
+          alt=""
+          className="hidden"
+          aria-hidden="true"
+          onError={() => setIsBackgroundAvailable(false)}
+        />
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md px-4"
+        className="relative z-10 w-full max-w-md"
       >
-        <div className="text-center mb-8">
+        <div
+          className={`text-center mb-8 ${hasBackground ? "text-white" : ""}`}
+        >
           <div className="inline-flex justify-center items-center mb-4">
-            <GraduationCap className="h-12 w-12 text-primary-600" />
+            <GraduationCap
+              className={`h-12 w-12 ${
+                hasBackground ? "text-primary-300" : "text-primary-600"
+              }`}
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">
+
+          <h1
+            className={`text-3xl font-bold ${
+              hasBackground ? "text-white" : "text-gray-900"
+            }`}
+          >
             {t("auth.register")}
           </h1>
-          <p className="mt-2 text-gray-600">{t("auth.registerSubtitle")}</p>
+
+          <p
+            className={`mt-2 ${
+              hasBackground ? "text-gray-200" : "text-gray-600"
+            }`}
+          >
+            {t("auth.registerSubtitle")}
+          </p>
         </div>
 
-        <Card className="animate-slide-up">
+        <Card
+          className={`animate-slide-up ${
+            hasBackground ? "backdrop-blur-sm bg-white/90 shadow-lg" : ""
+          }`}
+        >
           <CardContent>
             {error && (
               <motion.div
@@ -104,6 +166,7 @@ const RegisterPage: React.FC = () => {
                     className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
+
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                   <input
@@ -172,6 +235,7 @@ const RegisterPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("auth.role")}
                 </label>
+
                 <div className="mt-1 grid grid-cols-2 gap-3">
                   {["ALUMNI", "EMPLOYER"].map((r) => (
                     <motion.button
