@@ -60,7 +60,13 @@ class EmploymentStatsView(APIView):
             employed_specialty=Count("id", filter=Q(employment_status=AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY)),
             employed_not_specialty=Count("id", filter=Q(employment_status=AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY)),
             self_employed=Count("id", filter=Q(employment_status=AlumniProfile.EmploymentStatus.SELF_EMPLOYED)),
-            continuing_education=Count("id", filter=Q(employment_status=AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION)),
+            continuing_education=Count(
+                "id",
+                filter=(
+                    Q(employment_status=AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION)
+                    | (Q(continuing_education_place__isnull=False) & ~Q(continuing_education_place=""))
+                ),
+            ),
             unemployed=Count("id", filter=Q(employment_status=AlumniProfile.EmploymentStatus.UNEMPLOYED)),
             lost_contact=Count("id", filter=Q(employment_status=AlumniProfile.EmploymentStatus.LOST_CONTACT)),
         ).order_by("graduation_year")
@@ -286,8 +292,11 @@ class EmploymentReportPdfView(APIView):
             surveyed = sum(1 for item in items if item.is_surveyed)
             denominator = surveyed or len(items)
             counts = defaultdict(int)
+            continuing_count = 0
             for item in items:
                 counts[item.employment_status] += 1
+                if item.employment_status == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or item.continuing_education_place:
+                    continuing_count += 1
             graduation_percent = f"{_percent(total_graduates, admission_count)}%" if admission_count else "—"
             data.append([
                 self._p(f"{group_name}\n{year or 'без года'}", styles),
@@ -296,7 +305,7 @@ class EmploymentReportPdfView(APIView):
                 self._p(_count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY], denominator), styles, center=True),
                 self._p(_count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY], denominator), styles, center=True),
                 self._p(_count_with_percent(counts[AlumniProfile.EmploymentStatus.SELF_EMPLOYED], denominator), styles, center=True),
-                self._p(_count_with_percent(counts[AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION], denominator), styles, center=True),
+                self._p(_count_with_percent(continuing_count, denominator), styles, center=True),
                 self._p(_count_with_percent(counts[AlumniProfile.EmploymentStatus.UNEMPLOYED], denominator), styles, center=True),
                 self._p(_count_with_percent(counts[AlumniProfile.EmploymentStatus.LOST_CONTACT], len(items)), styles, center=True),
                 self._p(graduation_percent, styles, center=True),
