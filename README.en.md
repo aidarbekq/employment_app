@@ -8,7 +8,7 @@ A full-stack employment platform consisting of:
 * **Reverse Proxy**: Nginx
 * **Orchestration**: Docker & Docker Compose
 
-Everything lives in one repo, runs with `docker-compose up --build`, and serves:
+Everything lives in one repo, runs with `docker compose up --build`, and serves:
 
 * React SPA at `/`
 * Django Admin at `/admin/`
