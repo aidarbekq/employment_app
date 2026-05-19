@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { BarChart3, Users, Building, ArrowRight } from 'lucide-react';
+import { ArrowRight, BarChart3, Building, ExternalLink, Landmark, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,14 @@ interface EmploymentStatsResponse {
   [year: string]: EmploymentStatsEntry | { total_employers?: number } | undefined;
 }
 
+interface Partner {
+  id: number;
+  name: string;
+  description: string;
+  website: string;
+  logo_url: string | null;
+}
+
 const heroModules = import.meta.glob('../assets/hero.jpg', {
   eager: true,
   query: '?url',
@@ -34,6 +42,7 @@ const HomePage: React.FC = () => {
   const [employmentRate, setEmploymentRate] = useState<number | null>(null);
   const [totalGraduates, setTotalGraduates] = useState<number | null>(null);
   const [totalEmployers, setTotalEmployers] = useState<number | null>(null);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [isHeroImageAvailable, setIsHeroImageAvailable] = useState(Boolean(heroImage));
 
   useEffect(() => {
@@ -61,14 +70,23 @@ const HomePage: React.FC = () => {
       }
     };
 
+    const fetchPartners = async () => {
+      try {
+        const res = await api.get('employers/partners/');
+        setPartners(res.data as Partner[]);
+      } catch (error) {
+        console.error('Failed to load partners:', error);
+      }
+    };
+
     fetchStats();
+    fetchPartners();
   }, []);
 
   const hasHeroImage = Boolean(heroImage && isHeroImageAvailable);
 
   return (
     <div className="animate-fade-in">
-      {/* Hero */}
       <section className="relative bg-gradient-to-r from-primary-700 to-primary-900 text-white">
         {hasHeroImage && (
           <div
@@ -88,7 +106,11 @@ const HomePage: React.FC = () => {
         )}
 
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-primary-100 mb-6 backdrop-blur-sm">
+              <Landmark className="h-4 w-4" />
+              {t('home.departmentBadge')}
+            </div>
             <h1 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">
               {t('home.heroTitle')}
             </h1>
@@ -118,7 +140,38 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Stats */}
+      <section className="py-12 bg-white border-b border-gray-100">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-8 items-center">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary-600 mb-2">
+                {t('home.departmentLabel')}
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                {t('home.departmentTitle')}
+              </h2>
+              <p className="text-gray-600 leading-7">{t('home.departmentDescription')}</p>
+            </div>
+            <div className="rounded-2xl bg-primary-50 p-6 border border-primary-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500">{t('home.directionCode')}</p>
+                  <p className="font-semibold text-gray-900">710200</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">{t('home.institute')}</p>
+                  <p className="font-semibold text-gray-900">{t('home.instituteName')}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-gray-500">{t('home.mainProfiles')}</p>
+                  <p className="font-semibold text-gray-900">{t('home.mainProfilesText')}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-12 text-gray-800">
@@ -171,7 +224,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Features */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-12 text-gray-800">
@@ -228,18 +280,55 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Partners */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-12 text-gray-800">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-4 text-gray-800">
             {t('home.Our Partners')}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center justify-items-center opacity-70">
-            <div className="text-xl font-bold text-gray-400">Company A</div>
-            <div className="text-xl font-bold text-gray-400">Company B</div>
-            <div className="text-xl font-bold text-gray-400">Company C</div>
-            <div className="text-xl font-bold text-gray-400">Company D</div>
-          </div>
+          <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">
+            {t('home.partnersDescription')}
+          </p>
+
+          {partners.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {partners.map((partner) => (
+                <Card key={partner.id} className="h-full hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6 h-full flex flex-col">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="h-14 w-14 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center overflow-hidden text-primary-700 font-bold">
+                        {partner.logo_url ? (
+                          <img src={partner.logo_url} alt={partner.name} className="h-full w-full object-contain p-2" />
+                        ) : (
+                          partner.name.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{partner.name}</h3>
+                        {partner.website && (
+                          <a
+                            href={partner.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-sm text-primary-600 hover:underline"
+                          >
+                            {t('home.partnerWebsite')}
+                            <ExternalLink className="ml-1 h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 leading-6 flex-1">{partner.description || t('common.notSpecified')}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center justify-items-center opacity-70">
+              {['Тумар Тех', 'Ала-Тоо Digital', 'Ынтымак Telecom', 'Манас Cloud'].map((name) => (
+                <div key={name} className="text-xl font-bold text-gray-400">{name}</div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>

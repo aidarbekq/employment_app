@@ -1,20 +1,23 @@
-from rest_framework import viewsets, permissions, filters
-from .models import Employer
-from .serializers import EmployerSerializer
+from rest_framework import filters, permissions, viewsets
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+
+from .models import Employer, Partner
+from .serializers import EmployerSerializer, PartnerSerializer
+
+
+class IsAdminUserRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.role == request.user.Roles.ADMIN)
+
 
 class IsEmployerOwnerOrReadOnly(permissions.BasePermission):
-    """
-    Только владелец профиля Employer (role=EMPLOYER) или ADMIN может редактировать.
-    Остальные могут только read-only.
-    """
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
-        # ADMIN может
         if request.user.role == request.user.Roles.ADMIN:
             return True
-        # владелец записи (user)
         return obj.user == request.user
+
 
 class EmployerViewSet(viewsets.ModelViewSet):
     queryset = Employer.objects.all().select_related("user")
@@ -33,9 +36,27 @@ class EmployerViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == user.Roles.ADMIN:
-            return Employer.objects.all()
-        # Если работодатель, он смотрит только свой
+            return Employer.objects.all().select_related("user")
         if user.role == user.Roles.EMPLOYER:
-            return Employer.objects.filter(user=user)
-        # для остальных (выпускники) можно показывать всех работодателей, чтобы выбирать
-        return Employer.objects.all()
+            return Employer.objects.filter(user=user).select_related("user")
+        return Employer.objects.all().select_related("user")
+
+
+class PartnerViewSet(viewsets.ModelViewSet):
+    queryset = Partner.objects.all().select_related("employer")
+    serializer_class = PartnerSerializer
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name", "description", "website"]
+
+    def get_queryset(self):
+        qs = Partner.objects.all().select_related("employer")
+        user = self.request.user
+        if not (user.is_authenticated and user.role == user.Roles.ADMIN):
+            qs = qs.filter(is_active=True)
+        return qs
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [permissions.AllowAny()]
+        return [IsAdminUserRole()]
