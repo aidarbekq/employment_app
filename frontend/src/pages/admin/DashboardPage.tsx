@@ -18,7 +18,26 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import * as XLSX from "xlsx";
+
+
+const escapeCsvValue = (value: string | number) => {
+  const stringValue = String(value);
+  return `"${stringValue.replace(/"/g, '""')}"`;
+};
+
+const downloadCsv = (rows: Array<Array<string | number>>, fileName: string) => {
+  const csv = rows.map((row) => row.map(escapeCsvValue).join(",")).join("\n");
+  const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 interface StatYear {
   total: number;
@@ -61,18 +80,24 @@ const AdminDashboardPage: React.FC = () => {
   }));
 
   const handleExport = () => {
-    const data = filteredYears.map((year) => ({
-      [t("admin.year")]: year,
-      [t("admin.totalGraduates")]: stats[year].total,
-      [t("admin.employed")]: stats[year].employed,
-      [t("admin.unemployed")]: stats[year].unemployed,
-      [t("admin.percentEmployed")]: `${stats[year].percent_employed}%`,
-    }));
+    const rows: Array<Array<string | number>> = [
+      [
+        t("admin.year"),
+        t("admin.totalGraduates"),
+        t("admin.employed"),
+        t("admin.unemployed"),
+        t("admin.percentEmployed"),
+      ],
+      ...filteredYears.map((year) => [
+        year,
+        stats[year].total,
+        stats[year].employed,
+        stats[year].unemployed,
+        `${stats[year].percent_employed}%`,
+      ]),
+    ];
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, t("admin.statistics"));
-    XLSX.writeFile(workbook, "employment_stats.xlsx");
+    downloadCsv(rows, "employment_stats.csv");
   };
 
   if (loading) {
