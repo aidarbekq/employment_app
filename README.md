@@ -1,145 +1,144 @@
 [English](./README.en.md) | [Русский](./README.md)
 
-# Employment App Монорепозиторий
+# Employment App
 
-Полноценная платформа для управления трудоустройством:
+Монорепозиторий для системы учёта трудоустройства выпускников кафедры.
 
-* **Frontend**: React + TypeScript + Vite
-* **Backend**: Django REST Framework + SQLite
-* **Обратный прокси**: Nginx
-* **Оркестрация**: Docker & Docker Compose
+## Стек
 
-Всё хранится в одном репозитории, запускается командой `docker compose up --build` и предоставляет:
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS
+- **Backend:** Django, Django REST Framework, Simple JWT, SQLite
+- **Proxy:** Nginx
+- **Запуск:** Docker Compose v2
 
-* React SPA по `/`
-* Админ-панель Django по `/admin/`
-* REST API Django по `/api/`
+## Структура проекта
 
----
-
-## 📁 Структура репозитория
-
-```
+```text
 employment_app-main/
-├── Dockerfile.backend       # Сборка образа Django/Gunicorn
-├── Dockerfile.nginx         # Многоступенчатая сборка: React → Nginx
-├── docker-compose.yml       # Описание сервисов backend + nginx
-├── nginx.conf               # Конфиг Nginx для прокси и статического контента
-├── .env.example             # Пример файла переменных окружения
-│
-├── employment_system-main/  # Django REST backend
+├── backend/                 # Django REST API
 │   ├── manage.py
 │   ├── requirements.txt
-│   ├── employment_system/   # Настройки и URL проекта
-│   ├── users/               # Приложение пользователей
-│   ├── alumni/              # Приложение выпускников
-│   ├── employers/           # Приложение работодателей
-│   ├── vacancies/           # Приложение вакансий
-│   └── ...                  # Другие Django-приложения
+│   ├── employment_system/   # настройки Django
+│   ├── users/               # пользователи и seed-команда
+│   ├── alumni/              # профили выпускников
+│   ├── employers/           # работодатели
+│   ├── vacancies/           # вакансии
+│   └── analytics/           # статистика трудоустройства
 │
-└── uniproj-main/            # React + Vite + Tailwind frontend
-    ├── package.json
-    ├── tsconfig.json
-    ├── src/
-    │   ├── pages/           # alumni/, employer/, graduate/
-    │   ├── services/api.ts  # HTTP-клиент (axios)
-    │   └── App.tsx, main.tsx
-    └── public/              # Статические файлы
+├── frontend/                # React + Vite frontend
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── src/
+│       ├── assets/          # локальные изображения
+│       ├── components/
+│       ├── contexts/
+│       ├── pages/
+│       └── services/api.ts
+│
+├── Dockerfile.backend
+├── Dockerfile.nginx
+├── docker-compose.yml
+├── nginx.conf
+├── .env.example
+└── README.md
 ```
 
----
+## Быстрый запуск через Docker
 
-## 🚀 Быстрый старт (локально)
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
 
-1. **Клонировать** репозиторий:
+После запуска:
 
-   ```bash
-   git clone https://github.com/<ваш-акк>/employment_app.git
-   cd employment_app/employment_app-main
-   ```
+```text
+Frontend: http://localhost/
+Django admin: http://localhost/admin/
+API: http://localhost/api/
+Swagger: http://localhost/api/docs/
+```
 
-2. \*\*Создать \*\*\`\` на основе примера:
+## Seed demo-данных
 
-   ```bash
-   cp .env.example .env
-   # Отредактировать .env: SECRET_KEY, DEBUG, ALLOWED_HOSTS и т.д.
-   ```
+Команда создаёт администратора, работодателей, выпускников, вакансии и демо-резюме.
 
-3. **Подготовить тома для Django**:
+```bash
+docker compose exec backend python manage.py seed --clear
+```
 
-   ```bash
-   cd employment_system-main
-   touch db.sqlite3
-   mkdir -p media staticfiles
-   chmod 660 db.sqlite3
-   chmod 755 media staticfiles
-   cd ..
-   ```
+Demo-креды:
 
-4. **Собрать и запустить контейнеры**:
+```text
+admin: admin_aidar
+password: DemoPass123!
 
-   ```bash
-   docker-compose up -d --build
-   ```
+employer: employer_tumar_tech
+password: DemoPass123!
 
-5. **Создать суперпользователя**:
+alumni: alumni_aizada_asanova
+password: DemoPass123!
+```
 
-   ```bash
-   docker-compose exec backend python manage.py createsuperuser
-   ```
+Дополнительные флаги:
 
-6. **Открыть в браузере**:
+```bash
+docker compose exec backend python manage.py seed
 
-   * SPA:   `http://localhost/`
-   * Админка: `http://localhost/admin/`
-   * API:   `http://localhost/api/users/`
+docker compose exec backend python manage.py seed --clear
 
----
+docker compose exec backend python manage.py seed --password NewPass123!
 
-## ⚙️ Конфигурация (`.env`)
+docker compose exec backend python manage.py seed --skip-resumes
+```
 
-Отредактируйте `.env` (пример в `.env.example`):
+## Локальный запуск backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed --clear
+python manage.py runserver
+```
+
+## Локальный запуск frontend
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Проверки frontend:
+
+```bash
+npm run lint
+npx tsc -b
+npm run build
+```
+
+## Переменные окружения
+
+Файл `.env.example` можно скопировать в `.env`:
 
 ```dotenv
-SECRET_KEY=ваш_секретный_ключ
+SECRET_KEY=change-me-in-production
 DEBUG=False
-ALLOWED_HOSTS=localhost,127.0.0.1,ваш-домен.ru
-CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
+CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
 ```
 
-> **Важно**: добавьте `.env` в `.gitignore`, чтобы не выкладывать секреты.
+`.env` не должен попадать в git.
 
----
+## Рекомендации для продакшена
 
-## 🧩 Анализ кода и рекомендации
-
-* **Monorepo**: чёткое разделение frontend/backend.
-* **Django**: DRF-сериализаторы, для продакшена сменить SQLite на PostgreSQL.
-* **React**: структура `src/pages/`, централизованный API-клиент.
-* **Nginx**: проксирование `/api/`, `/admin/`, `try_files` для SPA.
-* **Docker**: тома монтируют код и статические файлы, рекомендую healthchecks.
-* **Продакшен**: использовать Vault/секреты, настроить HTTPS, rate-limiting и CORS.
-
----
-
-## 📦 Деплоймент
-
-* **ВМ + Docker Compose** (AWS, GCP, Oracle).
-* **Платформы**: Fly.io, Render.com, Railway.
-* **Kubernetes**: Helm или манифесты, разделить сервисы.
-
-
----
-
-## 🤝 Contributing
-
-1. Fork & clone
-2. Create feature branch
-3. Commit & push
-4. Open PR
-
----
-
-## 📄 Лицензия
-
-MIT. Смотрите [LICENSE](LICENSE).
+- заменить SQLite на PostgreSQL;
+- вынести секреты в защищённое хранилище или secrets manager;
+- настроить HTTPS и production CORS/CSRF origins;
+- добавить healthcheck endpoint для backend;
+- добавить CI pipeline для `python manage.py check`, `npm run lint`, `npx tsc -b`, `npm run build`;
+- настроить code splitting для frontend, потому что production bundle уже больше 500 kB.

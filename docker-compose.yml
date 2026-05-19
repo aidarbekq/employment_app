@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   backend:
     build:
@@ -8,9 +6,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./employment_system-main:/app
-      - ./employment_system-main/media:/app/media
-      - ./employment_system-main/staticfiles:/app/staticfiles
+      - ./backend:/app
+      - ./backend/media:/app/media
+      - ./backend/staticfiles:/app/staticfiles
     environment:
       - DEBUG=0
     restart: always
@@ -24,5 +22,5 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./employment_system-main/media:/usr/share/nginx/html/media
-      - ./employment_system-main/staticfiles:/usr/share/nginx/html/staticfiles
+      - ./backend/media:/usr/share/nginx/html/media
+      - ./backend/staticfiles:/usr/share/nginx/html/staticfiles

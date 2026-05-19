@@ -12,12 +12,12 @@ RUN mkdir -p media staticfiles \
 
 
 # Копируем только requirements.txt и ставим все зависимости + gunicorn
-COPY employment_system-main/requirements.txt .
+COPY backend/requirements.txt .
 # Добавляем gunicorn в установку
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Копируем весь код
-COPY employment_system-main/ .
+COPY backend/ .
 
 # При старте: миграции, сбор статики и запуск gunicorn
 CMD ["sh", "-c", "\
