@@ -11,8 +11,8 @@ from django.core.management.base import BaseCommand, CommandParser
 from django.db import transaction
 from django.db.models.signals import post_delete
 
-from alumni.models import AlumniProfile
-from employers.models import Employer
+from alumni.models import AcademicGroup, AlumniProfile
+from employers.models import Employer, Partner
 from employers.signals import delete_employer_user
 from vacancies.models import Vacancy
 
@@ -20,6 +20,75 @@ User = get_user_model()
 
 DEFAULT_PASSWORD = "DemoPass123!"
 
+
+GROUPS: list[dict[str, Any]] = [
+    {
+        "name": "ИСТТ-1-21",
+        "graduation_year": 2026,
+        "direction_code": "710200",
+        "direction_name": "Информационные системы и технологии",
+        "profile": "Информационные системы и технологии в телекоммуникациях",
+        "study_form": AcademicGroup.StudyForm.FULL_TIME,
+        "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
+        "total_graduates": 24,
+        "admission_count": 25,
+    },
+    {
+        "name": "ИСТ-1-21",
+        "graduation_year": 2026,
+        "direction_code": "710200",
+        "direction_name": "Информационные системы и технологии",
+        "profile": "Программное обеспечение информационных систем",
+        "study_form": AcademicGroup.StudyForm.FULL_TIME,
+        "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
+        "total_graduates": 18,
+        "admission_count": 20,
+    },
+    {
+        "name": "ПЗИдот-1-21",
+        "graduation_year": 2026,
+        "direction_code": "690300",
+        "direction_name": "Инфокоммуникационные технологии и системы связи",
+        "profile": "Программно-защищенные инфокоммуникации",
+        "study_form": AcademicGroup.StudyForm.PART_TIME,
+        "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
+        "total_graduates": 9,
+        "admission_count": 9,
+    },
+    {
+        "name": "ИСТТдот-1-20",
+        "graduation_year": 2025,
+        "direction_code": "710200",
+        "direction_name": "Информационные системы и технологии",
+        "profile": "Информационные системы и технологии в телекоммуникациях",
+        "study_form": AcademicGroup.StudyForm.PART_TIME,
+        "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
+        "total_graduates": 22,
+        "admission_count": 22,
+    },
+    {
+        "name": "ИСТд-1-20",
+        "graduation_year": 2024,
+        "direction_code": "710200",
+        "direction_name": "Информационные системы и технологии",
+        "profile": "Программное обеспечение информационных систем",
+        "study_form": AcademicGroup.StudyForm.PART_TIME,
+        "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
+        "total_graduates": 16,
+        "admission_count": 17,
+    },
+    {
+        "name": "ИСТТ-1-20",
+        "graduation_year": 2023,
+        "direction_code": "710200",
+        "direction_name": "Информационные системы и технологии",
+        "profile": "Информационные системы и технологии в телекоммуникациях",
+        "study_form": AcademicGroup.StudyForm.FULL_TIME,
+        "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
+        "total_graduates": 20,
+        "admission_count": 20,
+    },
+]
 
 EMPLOYERS: list[dict[str, Any]] = [
     {
@@ -126,6 +195,16 @@ EMPLOYERS: list[dict[str, Any]] = [
             "интерфейсы и прототипирование сервисов для социальных проектов."
         ),
     },
+]
+
+
+PARTNERS: list[dict[str, Any]] = [
+    {"name": "ОсОО «Тумар Тех»", "slug": "tumar-tech", "employer_username": "employer_tumar_tech", "website": "https://tumar-tech.demo.local", "order": 10, "description": "Партнер кафедры по backend-разработке и стажировкам."},
+    {"name": "ОсОО «Ала-Тоо Digital»", "slug": "alatoo-digital", "employer_username": "employer_alatoo_digital", "website": "https://alatoo-digital.demo.local", "order": 20, "description": "Финтех-партнер для вакансий frontend и API-аналитики."},
+    {"name": "ОсОО «Ынтымак Telecom»", "slug": "yntymak-telecom", "employer_username": "employer_yntymak_telecom", "website": "https://yntymak-telecom.demo.local", "order": 30, "description": "Партнер по телеком-направлению, мониторингу и сетевой поддержке."},
+    {"name": "ОсОО «Манас Cloud»", "slug": "manas-cloud", "employer_username": "employer_manas_cloud", "website": "https://manas-cloud.demo.local", "order": 40, "description": "Партнер по DevOps, облачной инфраструктуре и контейнеризации."},
+    {"name": "ОсОО «Сары-Өзөн Data»", "slug": "saryozon-data", "employer_username": "employer_saryozon_data", "website": "https://saryozon-data.demo.local", "order": 50, "description": "Партнер по BI-аналитике, отчетности и визуализации данных."},
+    {"name": "ОсОО «Ак-Шумкар Lab»", "slug": "akshumkar-lab", "employer_username": "employer_akshumkar_lab", "website": "https://akshumkar-lab.demo.local", "order": 60, "description": "Партнер по UX/UI, прототипированию и социальным цифровым продуктам."},
 ]
 
 
@@ -560,6 +639,14 @@ class Command(BaseCommand):
             is_superuser=True,
         )
 
+        groups_by_name: dict[str, AcademicGroup] = {}
+        for group_data in GROUPS:
+            group, _ = AcademicGroup.objects.update_or_create(
+                name=group_data["name"],
+                defaults={key: value for key, value in group_data.items() if key != "name"},
+            )
+            groups_by_name[group.name] = group
+
         employers_by_username: dict[str, Employer] = {}
         for employer_data in EMPLOYERS:
             user = self._upsert_user(
@@ -581,6 +668,22 @@ class Command(BaseCommand):
             )
             employers_by_username[employer_data["username"]] = employer
 
+        partners_count = 0
+        for partner_data in PARTNERS:
+            employer = employers_by_username.get(partner_data["employer_username"])
+            Partner.objects.update_or_create(
+                slug=partner_data["slug"],
+                defaults={
+                    "name": partner_data["name"],
+                    "description": partner_data["description"],
+                    "website": partner_data["website"],
+                    "employer": employer,
+                    "order": partner_data["order"],
+                    "is_active": True,
+                },
+            )
+            partners_count += 1
+
         alumni_profiles: list[AlumniProfile] = []
         for alumni_data in ALUMNI:
             user = self._upsert_user(
@@ -596,14 +699,26 @@ class Command(BaseCommand):
             if employer_username:
                 employer = employers_by_username[employer_username]
 
+            academic_group = groups_by_name[self._group_name_for(alumni_data)]
+            employment_status = self._employment_status_for(alumni_data)
             profile, _ = AlumniProfile.objects.update_or_create(
                 user=user,
                 defaults={
+                    "academic_group": academic_group,
                     "graduation_year": alumni_data["graduation_year"],
                     "specialty": alumni_data["specialty"],
-                    "is_employed": alumni_data["is_employed"],
+                    "direction": academic_group.direction_name,
+                    "profile": academic_group.profile,
+                    "study_form": academic_group.study_form,
+                    "degree_level": academic_group.degree_level,
+                    "is_surveyed": employment_status != AlumniProfile.EmploymentStatus.LOST_CONTACT,
+                    "employment_status": employment_status,
                     "employer": employer,
+                    "workplace": employer.company_name if employer else self._workplace_for(alumni_data, employment_status),
                     "position": alumni_data["position"],
+                    "continuing_education_place": self._education_place_for(alumni_data, employment_status),
+                    "useful_subjects": self._useful_subjects_for(alumni_data),
+                    "self_study_topics": self._self_study_topics_for(alumni_data),
                 },
             )
             if not skip_resumes:
@@ -631,6 +746,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Demo seed completed successfully."))
         self.stdout.write(f"Admin: {admin_user.username} / {password}")
         self.stdout.write(f"Employers: {len(EMPLOYERS)}")
+        self.stdout.write(f"Academic groups: {len(GROUPS)}")
+        self.stdout.write(f"Partners: {partners_count}")
         self.stdout.write(
             f"Alumni: {len(alumni_profiles)} "
             f"({employed_count} employed, {unemployed_count} looking for work)"
@@ -686,21 +803,92 @@ class Command(BaseCommand):
         finally:
             post_delete.connect(delete_employer_user, sender=Employer)
 
+    def _group_name_for(self, alumni_data: dict[str, Any]) -> str:
+        year = alumni_data["graduation_year"]
+        specialty = alumni_data["specialty"].lower()
+        if year >= 2026 and "программ" in specialty:
+            return "ИСТ-1-21"
+        if year >= 2026 and ("безопас" in specialty or "сетев" in specialty):
+            return "ПЗИдот-1-21"
+        if year >= 2026:
+            return "ИСТТ-1-21"
+        if year == 2025:
+            return "ИСТТдот-1-20"
+        if year == 2024:
+            return "ИСТд-1-20"
+        return "ИСТТ-1-20"
+
+    def _employment_status_for(self, alumni_data: dict[str, Any]) -> str:
+        username = alumni_data["username"]
+        if username in {"alumni_elnura_mamatova", "alumni_cholpon_kalykova"}:
+            return AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION
+        if username in {"alumni_kanykei_omurbekova", "alumni_dinara_sarieva", "alumni_ulan_asan_uulu"}:
+            return AlumniProfile.EmploymentStatus.UNEMPLOYED
+        if username in {"alumni_bakyt_toktogulov", "alumni_saltanat_tursunbaeva"}:
+            return AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY
+        if username in {"alumni_jomart_myrzabekov"}:
+            return AlumniProfile.EmploymentStatus.SELF_EMPLOYED
+        if alumni_data["is_employed"]:
+            return AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY
+        return AlumniProfile.EmploymentStatus.UNEMPLOYED
+
+    def _workplace_for(self, alumni_data: dict[str, Any], employment_status: str) -> str:
+        if employment_status == AlumniProfile.EmploymentStatus.SELF_EMPLOYED:
+            return "ИП / проектная занятость"
+        if employment_status == AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY:
+            return "Частная организация"
+        return ""
+
+    def _education_place_for(self, alumni_data: dict[str, Any], employment_status: str) -> str:
+        if employment_status != AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION:
+            return ""
+        if alumni_data["graduation_year"] >= 2025:
+            return "Магистратура КГТУ им. И. Раззакова"
+        return "Курсы повышения квалификации по аналитике данных"
+
+    def _useful_subjects_for(self, alumni_data: dict[str, Any]) -> str:
+        specialty = alumni_data["specialty"].lower()
+        if "телеком" in specialty or "сетев" in specialty:
+            return "OSI/TCP/IP, построение LAN, сетевые протоколы, Linux, информационная безопасность"
+        if "аналит" in specialty:
+            return "SQL, базы данных, анализ требований, визуализация данных, проектирование отчетов"
+        if "кибер" in specialty or "безопас" in specialty:
+            return "Криптография, защита информации, операционные системы, сетевые журналы"
+        return "ООП, базы данных, UML-диаграммы, составление технического задания, web-разработка"
+
+    def _self_study_topics_for(self, alumni_data: dict[str, Any]) -> str:
+        skills = alumni_data.get("skills") or ""
+        topics = []
+        if "React" in skills or "JavaScript" in skills:
+            topics.append("React, JavaScript")
+        if "Docker" in skills or "DevOps" in skills:
+            topics.append("Docker, CI/CD")
+        if "Python" in skills:
+            topics.append("Python")
+        if "Power BI" in skills:
+            topics.append("Power BI")
+        return ", ".join(topics) or "Не приходилось"
+
     def _attach_resume(self, profile: AlumniProfile, alumni_data: dict[str, Any]) -> None:
         resume_path = f"resumes/{profile.user.username}/seed_resume.txt"
         if default_storage.exists(resume_path):
             default_storage.delete(resume_path)
 
-        employment_status = "Трудоустроен(а)" if alumni_data["is_employed"] else "В поиске работы"
-        employer_name = profile.employer.company_name if profile.employer else "—"
+        employment_status = profile.get_employment_status_display()
+        employer_name = profile.employer.company_name if profile.employer else (profile.workplace or "—")
         content = (
             f"Резюме выпускника: {profile.user.last_name} {profile.user.first_name}\n"
             f"Email: {profile.user.email}\n"
+            f"Группа: {profile.academic_group.name if profile.academic_group else '—'}\n"
             f"Год выпуска: {alumni_data['graduation_year']}\n"
             f"Специальность: {alumni_data['specialty']}\n"
+            f"Форма обучения: {profile.get_study_form_display() if profile.study_form else '—'}\n"
             f"Статус: {employment_status}\n"
             f"Компания: {employer_name}\n"
             f"Позиция / желаемая позиция: {alumni_data['position']}\n"
+            f"Продолжил обучение: {profile.continuing_education_place or '—'}\n"
+            f"Полезно в работе: {profile.useful_subjects or '—'}\n"
+            f"Изучал самостоятельно: {profile.self_study_topics or '—'}\n"
             f"Навыки: {alumni_data['skills']}\n"
             "Описание: демонстрационное резюме для проверки раздела профиля выпускника.\n"
         )
@@ -712,7 +900,9 @@ class Command(BaseCommand):
         for username in usernames:
             default_storage.delete(f"resumes/{username}/seed_resume.txt")
         Vacancy.objects.filter(employer__user__username__in=usernames).delete()
+        Partner.objects.filter(slug__in={item["slug"] for item in PARTNERS}).delete()
         deleted_count, _ = User.objects.filter(username__in=usernames).delete()
+        AcademicGroup.objects.filter(name__in={item["name"] for item in GROUPS}).delete()
         self.stdout.write(self.style.WARNING(f"Cleared seeded objects: {deleted_count}"))
 
     @staticmethod

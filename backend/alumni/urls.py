@@ -1,7 +1,8 @@
 from rest_framework.routers import DefaultRouter
-from .views import AlumniProfileViewSet
+from .views import AcademicGroupViewSet, AlumniProfileViewSet
 
 router = DefaultRouter()
-router.register(r"alumni-profiles", AlumniProfileViewSet, basename="alumniprofile")
+router.register(r"academic-groups", AcademicGroupViewSet, basename="academic-group")
+router.register(r"alumni-profiles", AlumniProfileViewSet, basename="alumni-profile")
 
 urlpatterns = router.urls

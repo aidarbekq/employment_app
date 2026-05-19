@@ -1,0 +1,106 @@
+# Generated manually for department reporting fields.
+
+import django.db.models.deletion
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("alumni", "0003_initial"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="AcademicGroup",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(help_text="Например: ИСТТ-1-21", max_length=50, unique=True)),
+                ("graduation_year", models.PositiveIntegerField(blank=True, null=True)),
+                ("direction_code", models.CharField(default="710200", max_length=20)),
+                ("direction_name", models.CharField(default="Информационные системы и технологии", max_length=255)),
+                ("profile", models.CharField(blank=True, default="", max_length=255)),
+                ("study_form", models.CharField(choices=[("FULL_TIME", "Очное"), ("PART_TIME", "Заочное (ДОТ)")], default="FULL_TIME", max_length=20)),
+                ("degree_level", models.CharField(choices=[("BACHELOR", "Бакалавриат"), ("MASTER", "Магистратура")], default="BACHELOR", max_length=20)),
+                ("total_graduates", models.PositiveIntegerField(blank=True, help_text="Общее количество выпускников группы для процентных отчетов.", null=True)),
+                ("admission_count", models.PositiveIntegerField(blank=True, help_text="Количество поступивших, если нужно считать процент выпуска.", null=True)),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+            ],
+            options={
+                "verbose_name": "Академическая группа",
+                "verbose_name_plural": "Академические группы",
+                "ordering": ["-graduation_year", "name"],
+            },
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="academic_group",
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="graduates", to="alumni.academicgroup"),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="direction",
+            field=models.CharField(blank=True, max_length=255, null=True),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="profile",
+            field=models.CharField(blank=True, max_length=255, null=True),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="study_form",
+            field=models.CharField(blank=True, choices=[("FULL_TIME", "Очное"), ("PART_TIME", "Заочное (ДОТ)")], max_length=20, null=True),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="degree_level",
+            field=models.CharField(choices=[("BACHELOR", "Бакалавриат"), ("MASTER", "Магистратура")], default="BACHELOR", max_length=20),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="is_surveyed",
+            field=models.BooleanField(default=True, help_text="Выпускник опрошен и его данные можно учитывать в отчетности."),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="employment_status",
+            field=models.CharField(choices=[("EMPLOYED_SPECIALTY", "Работает по специальности"), ("EMPLOYED_NOT_SPECIALTY", "Работает не по специальности"), ("SELF_EMPLOYED", "Самозанятый / предприниматель"), ("CONTINUING_EDUCATION", "Продолжает обучение"), ("UNEMPLOYED", "Не работает"), ("LOST_CONTACT", "Потеряна связь")], default="UNEMPLOYED", max_length=32),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="workplace",
+            field=models.CharField(blank=True, help_text="Свободное название места работы, если нет карточки работодателя.", max_length=255, null=True),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="continuing_education_place",
+            field=models.CharField(blank=True, help_text="Где продолжил обучение: магистратура, аспирантура и т.д.", max_length=255, null=True),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="useful_subjects",
+            field=models.TextField(blank=True, help_text="Что из изученного на кафедре полезно в работе.", null=True),
+        ),
+        migrations.AddField(
+            model_name="alumniprofile",
+            name="self_study_topics",
+            field=models.TextField(blank=True, help_text="Что пришлось изучать самостоятельно.", null=True),
+        ),
+        migrations.AlterField(
+            model_name="alumniprofile",
+            name="is_employed",
+            field=models.BooleanField(default=False, help_text="Backward-compatible flag. Calculated from employment_status in reports."),
+        ),
+        migrations.AlterField(
+            model_name="alumniprofile",
+            name="position",
+            field=models.CharField(blank=True, help_text="Должность выпускника.", max_length=255, null=True),
+        ),
+        migrations.AlterModelOptions(
+            name="alumniprofile",
+            options={"ordering": ["academic_group__name", "user__last_name", "user__first_name"], "verbose_name": "Профиль выпускника", "verbose_name_plural": "Профили выпускников"},
+        ),
+    ]
