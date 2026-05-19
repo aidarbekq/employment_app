@@ -1,7 +1,6 @@
 from rest_framework import generics, permissions
 from .models import User
 from .serializers import UserRegistrationSerializer, UserSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
