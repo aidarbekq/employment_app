@@ -165,6 +165,38 @@ npm run build
 
 `frontend/src/App.tsx` uses route-based code splitting with `React.lazy()` and `Suspense`. This reduces the initial JavaScript bundle: admin, employer, and graduate pages are loaded as separate chunks only when the user opens the matching route.
 
+
+## Department reporting features
+
+The project is adapted for the Department of Information Systems and Technologies named after Academician A. Zhainakov. The system now includes:
+
+- academic groups with study form, direction, profile, degree level, and graduate counts;
+- an extended graduate survey: employment status, workplace, position, continuing education, useful subjects, and self-study topics;
+- graduate creation from the admin panel;
+- editable homepage partners from the admin panel;
+- a pie chart for employment status analytics;
+- a PDF report with a detailed graduate list and percentage summary.
+
+## Employment PDF export
+
+An administrator can download the report from the analytics page or the graduates list. Endpoint:
+
+```text
+GET /api/analytics/employment-report.pdf
+```
+
+Supported filters:
+
+```text
+graduation_year
+academic_group
+study_form
+degree_level
+employment_status
+```
+
+If a group filter is selected, the PDF is generated only for that group. If no filter is selected, all groups and graduation years are included.
+
 ## Environment variables
 
 Copy `.env.example` to `.env`:
