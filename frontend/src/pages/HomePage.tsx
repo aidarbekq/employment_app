@@ -38,7 +38,7 @@ interface Partner {
   logo_url: string | null;
 }
 
-const heroModules = import.meta.glob('../assets/hero.jpg', {
+const heroModules = import.meta.glob('../assets/hero.png', {
   eager: true,
   query: '?url',
   import: 'default',
