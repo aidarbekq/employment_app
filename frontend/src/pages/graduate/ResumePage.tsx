@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import api from "@/services/api";
-import { Upload, File, Download, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import React, { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/services/api';
+import { Download, FileText, Trash2, UploadCloud } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import Button from '@/components/common/Button';
+import { Card, CardContent } from '@/components/common/Card';
+import PageHeader from '@/components/common/PageHeader';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 interface AlumniProfileSummary {
   id: number;
@@ -19,56 +23,63 @@ const ResumePage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [profileId, setProfileId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get("alumni/alumni-profiles/");
-        const myProfile = (res.data as AlumniProfileSummary[]).find((p) => {
-          if (typeof p.user === "object") return p.user.id === user?.id;
-          return p.user === user?.id;
-        });
+  const fetchProfile = useCallback(async () => {
+    if (!user) return;
 
-        if (myProfile) {
-          setResumeUrl(myProfile.resume);
-          setProfileId(myProfile.id);
-        } else {
-          setError(t("resume.notFound"));
-        }
-      } catch {
-        setError(t("resume.loadError"));
+    try {
+      const res = await api.get('alumni/alumni-profiles/');
+      const myProfile = (res.data as AlumniProfileSummary[]).find((profile) => {
+        if (typeof profile.user === 'object') return profile.user.id === user.id;
+        return profile.user === user.id;
+      });
+
+      if (myProfile) {
+        setResumeUrl(myProfile.resume);
+        setProfileId(myProfile.id);
+        setError(null);
+      } else {
+        setError(t('resume.notFound'));
       }
-    };
-
-    if (user) fetchProfile();
+    } catch {
+      setError(t('resume.loadError'));
+    }
   }, [user, t]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setFile(e.target.files[0]);
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setError(null);
     }
   };
 
   const handleUpload = async () => {
     if (!file || !profileId) {
-      setError(t("resume.noFile"));
+      setError(t('resume.noFile'));
       return;
     }
 
     setError(null);
     setIsUploading(true);
     const formData = new FormData();
-    formData.append("resume", file);
+    formData.append('resume', file);
 
     try {
-      await api.put(`alumni/alumni-profiles/${profileId}/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const response = await api.put(`alumni/alumni-profiles/${profileId}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      toast.success(t("resume.uploadSuccess"));
+      toast.success(t('resume.uploadSuccess'));
       setFile(null);
-      setResumeUrl(URL.createObjectURL(file)); // fake URL
+      setResumeUrl((response.data as AlumniProfileSummary).resume ?? null);
+      await fetchProfile();
     } catch {
-      toast.error(t("resume.uploadError"));
+      toast.error(t('resume.uploadError'));
     } finally {
       setIsUploading(false);
     }
@@ -79,93 +90,132 @@ const ResumePage: React.FC = () => {
 
     try {
       await api.put(`alumni/alumni-profiles/${profileId}/`, { resume: null });
-      toast.success(t("resume.deleteSuccess"));
+      toast.success(t('resume.deleteSuccess'));
       setResumeUrl(null);
+      setFile(null);
+      setIsDeleteOpen(false);
     } catch {
-      toast.error(t("resume.deleteError"));
+      toast.error(t('resume.deleteError'));
     }
   };
 
+  const fileName = resumeUrl?.split('/').pop() || t('resume.title');
+
   return (
-    <div className="max-w-3xl mx-auto mt-10 p-4 sm:p-6 bg-white rounded-xl shadow-md space-y-6">
-      <h1 className="text-2xl font-bold text-blue-800">{t("resume.title")}</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('resume.title')}
+        subtitle={t('resume.formats')}
+        icon={<FileText className="h-6 w-6" />}
+      />
 
-      {error && <p className="text-red-600">{error}</p>}
-
-      {resumeUrl ? (
-        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center space-x-3">
-              <File className="h-6 w-6 text-blue-500" />
-              <a
-                href={resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline text-blue-700 hover:text-blue-900 break-all"
-              >
-                {resumeUrl.split("/").pop()}
-              </a>
-            </div>
-            <div className="flex flex-wrap gap-2 justify-end">
-              <a href={resumeUrl} download>
-                <button className="flex items-center gap-1 px-4 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                  <Download className="w-4 h-4" />
-                  {t("resume.download")}
-                </button>
-              </a>
-              <button
-                onClick={handleDelete}
-                className="flex items-center gap-1 px-4 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                <Trash2 className="w-4 h-4" />
-                {t("resume.delete")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-4" />
-          <p className="text-lg font-medium text-gray-700 mb-2">{t("resume.uploadPrompt")}</p>
-          <p className="text-sm text-gray-500 mb-4">{t("resume.formats")}</p>
-
-          <label htmlFor="file-upload" className="cursor-pointer inline-block">
-            <div className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded hover:bg-blue-50">
-              {t("resume.selectFile")}
-            </div>
-            <input
-              id="file-upload"
-              type="file"
-              className="sr-only"
-              onChange={handleFileChange}
-              accept=".pdf,.doc,.docx"
-            />
-          </label>
-
-          {file && (
-            <div className="mt-4 space-y-2">
-              <p className="text-sm text-gray-700">{file.name}</p>
-              <button
-                onClick={handleUpload}
-                disabled={isUploading}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              >
-                {isUploading ? t("resume.uploading") : t("resume.upload")}
-              </button>
-            </div>
-          )}
+      {error && (
+        <div className="rounded-2xl border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
+          {error}
         </div>
       )}
 
-      <div className="pt-6 border-t border-gray-200">
-        <h2 className="font-medium text-gray-800 mb-3">{t("resume.tipsTitle")}</h2>
-        <ul className="list-disc list-inside text-gray-600 space-y-1 text-sm">
-          <li>{t("resume.tipOne")}</li>
-          <li>{t("resume.tipTwo")}</li>
-          <li>{t("resume.tipThree")}</li>
-          <li>{t("resume.tipFour")}</li>
-        </ul>
-      </div>
+      <Card className="overflow-hidden rounded-3xl border-gray-100">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="border-b border-gray-100 p-6 sm:p-8 lg:border-b-0 lg:border-r">
+              {resumeUrl ? (
+                <div className="space-y-5">
+                  <div className="flex flex-col gap-4 rounded-3xl border border-primary-100 bg-primary-50/70 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-4 min-w-0">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-primary-700 shadow-sm ring-1 ring-primary-100">
+                        <FileText className="h-7 w-7" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{fileName}</p>
+                        <p className="mt-1 text-xs text-gray-500 break-all">{resumeUrl}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <a href={resumeUrl} download className="w-full sm:w-auto">
+                        <Button type="button" size="sm" className="w-full" leftIcon={<Download className="h-4 w-4" />}>
+                          {t('resume.download')}
+                        </Button>
+                      </a>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="danger"
+                        leftIcon={<Trash2 className="h-4 w-4" />}
+                        onClick={() => setIsDeleteOpen(true)}
+                      >
+                        {t('resume.delete')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center">
+                    <UploadCloud className="mx-auto mb-3 h-10 w-10 text-primary-500" />
+                    <p className="text-sm font-semibold text-gray-900">{t('resume.uploadPrompt')}</p>
+                    <p className="mt-1 text-xs text-gray-500">{t('resume.formats')}</p>
+                    <label htmlFor="file-upload" className="mt-4 inline-flex cursor-pointer">
+                      <span className="rounded-xl border border-primary-200 bg-white px-4 py-2 text-sm font-semibold text-primary-700 shadow-sm transition hover:bg-primary-50">
+                        {t('resume.selectFile')}
+                      </span>
+                      <input id="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".pdf,.doc,.docx" />
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-3xl border-2 border-dashed border-primary-200 bg-primary-50/60 p-8 text-center">
+                  <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-primary-700 shadow-sm ring-1 ring-primary-100">
+                    <UploadCloud className="h-8 w-8" />
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900">{t('resume.uploadPrompt')}</p>
+                  <p className="mt-2 text-sm text-gray-500">{t('resume.formats')}</p>
+
+                  <label htmlFor="file-upload" className="mt-5 inline-flex cursor-pointer">
+                    <span className="rounded-xl border border-primary-200 bg-white px-5 py-2.5 text-sm font-semibold text-primary-700 shadow-sm transition hover:bg-primary-50">
+                      {t('resume.selectFile')}
+                    </span>
+                    <input id="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".pdf,.doc,.docx" />
+                  </label>
+                </div>
+              )}
+
+              {file && (
+                <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <FileText className="h-5 w-5 shrink-0 text-primary-600" />
+                    <span className="truncate text-sm font-medium text-gray-800">{file.name}</span>
+                  </div>
+                  <Button onClick={handleUpload} isLoading={isUploading} disabled={isUploading} leftIcon={<UploadCloud className="h-4 w-4" />}>
+                    {isUploading ? t('resume.uploading') : t('resume.upload')}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50/70 p-6 sm:p-8">
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">{t('resume.tipsTitle')}</h2>
+              <div className="space-y-3">
+                {[t('resume.tipOne'), t('resume.tipTwo'), t('resume.tipThree'), t('resume.tipFour')].map((tip) => (
+                  <div key={tip} className="flex gap-3 rounded-2xl bg-white p-4 text-sm leading-6 text-gray-600 shadow-sm ring-1 ring-gray-100">
+                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
+                    <span>{tip}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        open={isDeleteOpen}
+        title={t('resume.delete')}
+        description={t('resume.confirmDelete')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setIsDeleteOpen(false)}
+      />
     </div>
   );
 };

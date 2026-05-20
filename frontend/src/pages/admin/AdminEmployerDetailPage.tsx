@@ -1,16 +1,26 @@
-// src/pages/admin/AdminEmployerDetailPage.tsx
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import api from "@/services/api";
-import Button from "@/components/common/Button";
-import { Input } from "@/components/common/Input";
-import { Loader2, Trash2, Save, ArrowLeft, Pencil } from "lucide-react";
-import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, Building2, Mail, MapPin, Pencil, Phone, Save, Trash2, UserCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import api from '@/services/api';
+import Button from '@/components/common/Button';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import DetailItem from '@/components/common/DetailItem';
+import PageHeader from '@/components/common/PageHeader';
+import { Card, CardContent } from '@/components/common/Card';
+import { InputField, TextareaField } from '@/components/common/FormControls';
+
+interface UserInfo {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
 
 interface Employer {
   id: number;
-  user: string;
+  user: UserInfo;
   company_name: string;
   address: string;
   phone: string;
@@ -27,37 +37,41 @@ const AdminEmployerDetailPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchEmployer = async () => {
       try {
         const res = await api.get(`employers/employers/${id}/`);
         setEmployer(res.data);
       } catch {
-        setError(t("common.error"));
+        setError(t('common.error'));
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchEmployer();
   }, [id, t]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!employer) return;
-    setEmployer({ ...employer, [e.target.name]: e.target.value });
+  const updateField = (field: keyof Pick<Employer, 'company_name' | 'address' | 'phone' | 'description'>, value: string) => {
+    setEmployer((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
   const handleUpdate = async () => {
     if (!employer) return;
     setSaving(true);
     try {
-      await api.put(`employers/employers/${employer.id}/`, employer);
-      toast.success(t("common.success"));
+      await api.put(`employers/employers/${employer.id}/`, {
+        company_name: employer.company_name,
+        address: employer.address,
+        phone: employer.phone,
+        description: employer.description,
+      });
+      toast.success(t('common.success'));
       setIsEditing(false);
     } catch {
-      toast.error(t("common.error"));
+      toast.error(t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -68,123 +82,93 @@ const AdminEmployerDetailPage: React.FC = () => {
     setDeleting(true);
     try {
       await api.delete(`employers/employers/${employer.id}/`);
-      toast.success(t("admin.employersManagement") + ": " + t("common.success"));
-      navigate("/admin/employers");
+      toast.success(t('common.success'));
+      navigate('/admin/employers');
     } catch {
-      toast.error(t("common.error"));
+      toast.error(t('common.error'));
     } finally {
       setDeleting(false);
       setShowConfirm(false);
     }
   };
 
-  if (loading)
-    return <p className="text-center mt-10 text-gray-500">{t("common.loading")}</p>;
-
-  if (error || !employer)
-    return <p className="text-center mt-10 text-red-500">{error}</p>;
+  if (loading) return <p className="mt-10 text-center text-gray-500">{t('common.loading')}</p>;
+  if (error || !employer) return <p className="mt-10 text-center text-error-600">{error || t('common.error')}</p>;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">
-        {t("admin.employersManagement")}
-      </h1>
-
-      <div className="space-y-4">
-        <Input
-          label={t("employer.company_name")}
-          name="company_name"
-          value={employer.company_name}
-          onChange={handleChange}
-          disabled={!isEditing}
-        />
-        <Input
-          label={t("employer.address")}
-          name="address"
-          value={employer.address}
-          onChange={handleChange}
-          disabled={!isEditing}
-        />
-        <Input
-          label={t("employer.phone")}
-          name="phone"
-          value={employer.phone}
-          onChange={handleChange}
-          disabled={!isEditing}
-        />
-        <Input
-          label={t("employer.description")}
-          name="description"
-          value={employer.description}
-          onChange={handleChange}
-          disabled={!isEditing}
-        />
-      </div>
-
-      <div className="pt-8 flex flex-col sm:flex-row sm:justify-between gap-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/employers")}
-          className="w-full sm:w-auto"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          {t("common.back")}
-        </Button>
-
-        <Button
-          variant="danger"
-          onClick={() => setShowConfirm(true)}
-          leftIcon={<Trash2 />}
-          className="w-full sm:w-auto"
-        >
-          {t("common.delete")}
-        </Button>
-
-        {!isEditing ? (
-          <Button
-            variant="outline"
-            onClick={() => setIsEditing(true)}
-            leftIcon={<Pencil />}
-            className="w-full sm:w-auto"
-          >
-            {t("common.edit")}
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            onClick={handleUpdate}
-            leftIcon={saving ? <Loader2 className="animate-spin" /> : <Save />}
-            disabled={saving}
-            className="w-full sm:w-auto"
-          >
-            {t("common.save")}
-          </Button>
-        )}
-      </div>
-
-      {/* Confirm Delete Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t("common.confirmDelete")}</h2>
-            <p className="text-gray-700">
-              {t("admin.confirmDeleteEmployer", { name: employer.company_name })}
-            </p>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowConfirm(false)}>
-                {t("common.cancel")}
+    <div className="space-y-6">
+      <PageHeader
+        title={employer.company_name || t('admin.employersManagement')}
+        subtitle={employer.user?.email || t('common.notSpecified')}
+        icon={<Building2 className="h-6 w-6" />}
+        actions={
+          <>
+            <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate('/admin/employers')}>
+              {t('common.backToList')}
+            </Button>
+            <Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => setShowConfirm(true)}>
+              {t('common.delete')}
+            </Button>
+            {!isEditing ? (
+              <Button leftIcon={<Pencil className="h-4 w-4" />} onClick={() => setIsEditing(true)}>
+                {t('common.edit')}
               </Button>
-              <Button
-                variant="danger"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? t("vacancy.updating") : t("common.delete")}
+            ) : (
+              <Button leftIcon={<Save className="h-4 w-4" />} isLoading={saving} onClick={handleUpdate}>
+                {t('common.save')}
               </Button>
-            </div>
-          </div>
+            )}
+          </>
+        }
+      />
+
+      <Card className="overflow-hidden">
+        <div className="bg-gradient-to-r from-primary-700 to-primary-900 px-5 py-6 text-white sm:px-6">
+          <p className="text-sm text-primary-100">{t('employer.company')}</p>
+          <h2 className="mt-1 text-2xl font-bold">{employer.company_name || t('common.notSpecified')}</h2>
         </div>
-      )}
+        <CardContent className="space-y-6 p-5 sm:p-6">
+          {!isEditing ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <DetailItem label={t('employer.company_name')} value={employer.company_name} icon={<Building2 className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
+                <DetailItem label={t('employer.address')} value={employer.address} icon={<MapPin className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
+                <DetailItem label={t('employer.phone')} value={employer.phone} icon={<Phone className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
+                <DetailItem label={t('auth.firstName')} value={employer.user?.first_name} icon={<UserCircle className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
+                <DetailItem label={t('auth.lastName')} value={employer.user?.last_name} icon={<UserCircle className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
+                <DetailItem label={t('auth.email')} value={employer.user?.email} icon={<Mail className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
+              </div>
+              <DetailItem label={t('employer.description')} value={employer.description ? <p className="whitespace-pre-line">{employer.description}</p> : undefined} emptyText={t('common.notSpecified')} className="bg-white" />
+            </>
+          ) : (
+            <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); handleUpdate(); }}>
+              <InputField label={t('employer.company_name')} value={employer.company_name || ''} onChange={(event) => updateField('company_name', event.target.value)} />
+              <InputField label={t('employer.address')} value={employer.address || ''} onChange={(event) => updateField('address', event.target.value)} />
+              <InputField label={t('employer.phone')} value={employer.phone || ''} onChange={(event) => updateField('phone', event.target.value)} />
+              <TextareaField className="md:col-span-2" label={t('employer.description')} rows={5} value={employer.description || ''} onChange={(event) => updateField('description', event.target.value)} />
+              <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl shadow-gray-950/10 backdrop-blur sm:flex-row sm:justify-end md:col-span-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" isLoading={saving} leftIcon={<Save className="h-4 w-4" />}>
+                  {t('common.save')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        open={showConfirm}
+        title={t('common.confirmDelete')}
+        description={t('admin.confirmDeleteEmployer', { name: employer.company_name })}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        loading={deleting}
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

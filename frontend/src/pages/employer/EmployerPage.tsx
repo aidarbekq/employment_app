@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Building2, Edit3, Mail, MapPin, Phone, UserCircle } from "lucide-react";
 import Button from "@/components/common/Button";
 import { Card, CardContent } from "@/components/common/Card";
+import { InputField, TextareaField } from "@/components/common/FormControls";
 
 interface UserInfo {
   id: number;
@@ -166,7 +167,12 @@ const EmployerPage: React.FC = () => {
               </div>
             </div>
             {!isEditing && (
-              <Button leftIcon={<Edit3 className="h-4 w-4" />} onClick={() => setIsEditing(true)} className="bg-white text-primary-700 hover:bg-primary-50">
+              <Button
+                leftIcon={<Edit3 className="h-4 w-4" />}
+                onClick={() => setIsEditing(true)}
+                variant="outline"
+                className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white focus:ring-white/60"
+              >
                 {t("common.edit")}
               </Button>
             )}
@@ -207,37 +213,40 @@ const EmployerPage: React.FC = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {editableFields.map((field) => (
-                  <div key={field}>
-                    <label className="block mb-1 text-sm font-medium text-gray-700">{t(`employer.${field}`)}</label>
-                    <input
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary-600" />
+                  <h2 className="text-lg font-semibold text-gray-900">{t("employer.company")}</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {editableFields.map((field) => (
+                    <InputField
+                      key={field}
                       name={field}
+                      label={t(`employer.${field}`)}
                       value={formData[field]}
                       onChange={handleChange}
                       type={field === "email" ? "email" : "text"}
-                      className="w-full border border-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">{t("employer.description")}</label>
-                <textarea
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <TextareaField
                   name="description"
+                  label={t("employer.description")}
                   value={formData.description}
                   onChange={handleChange}
-                  rows={4}
-                  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  rows={5}
                 />
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                <Button type="submit" className="w-full sm:w-auto">{t("common.save")}</Button>
+              <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white/90 p-4 shadow-xl backdrop-blur sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
                   {t("common.cancel")}
                 </Button>
+                <Button type="submit" className="w-full sm:w-auto">{t("common.save")}</Button>
               </div>
             </form>
           )}
