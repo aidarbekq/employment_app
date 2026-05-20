@@ -1,10 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
-import { Edit, Layers, Plus, Trash2 } from "lucide-react";
-import api from "@/services/api";
-import Button from "@/components/common/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/Card";
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import { Edit, Layers, Plus, Trash2 } from 'lucide-react';
+import api from '@/services/api';
+import Button from '@/components/common/Button';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import EmptyState from '@/components/common/EmptyState';
+import PageHeader from '@/components/common/PageHeader';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
+import { InputField, SelectField, SwitchField } from '@/components/common/FormControls';
 
 interface AcademicGroup {
   id: number;
@@ -36,28 +40,28 @@ type GroupFormData = {
 };
 
 const emptyForm: GroupFormData = {
-  name: "",
-  graduation_year: "",
-  direction_code: "710200",
-  direction_name: "Информационные системы и технологии",
-  profile: "",
-  study_form: "FULL_TIME",
-  degree_level: "BACHELOR",
-  total_graduates: "",
-  admission_count: "",
+  name: '',
+  graduation_year: '',
+  direction_code: '710200',
+  direction_name: 'Информационные системы и технологии',
+  profile: '',
+  study_form: 'FULL_TIME',
+  degree_level: 'BACHELOR',
+  total_graduates: '',
+  admission_count: '',
   is_active: true,
 };
 
 const toFormData = (group: AcademicGroup): GroupFormData => ({
   name: group.name,
-  graduation_year: group.graduation_year ? String(group.graduation_year) : "",
-  direction_code: group.direction_code || "",
-  direction_name: group.direction_name || "",
-  profile: group.profile || "",
-  study_form: group.study_form || "FULL_TIME",
-  degree_level: group.degree_level || "BACHELOR",
-  total_graduates: group.total_graduates ? String(group.total_graduates) : "",
-  admission_count: group.admission_count ? String(group.admission_count) : "",
+  graduation_year: group.graduation_year ? String(group.graduation_year) : '',
+  direction_code: group.direction_code || '',
+  direction_name: group.direction_name || '',
+  profile: group.profile || '',
+  study_form: group.study_form || 'FULL_TIME',
+  degree_level: group.degree_level || 'BACHELOR',
+  total_graduates: group.total_graduates ? String(group.total_graduates) : '',
+  admission_count: group.admission_count ? String(group.admission_count) : '',
   is_active: group.is_active,
 });
 
@@ -79,8 +83,10 @@ const AdminGroupsPage: React.FC = () => {
   const [groups, setGroups] = useState<AcademicGroup[]>([]);
   const [formData, setFormData] = useState<GroupFormData>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AcademicGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const sortedGroups = useMemo(
     () => [...groups].sort((a, b) => (b.graduation_year ?? 0) - (a.graduation_year ?? 0) || a.name.localeCompare(b.name)),
@@ -90,11 +96,11 @@ const AdminGroupsPage: React.FC = () => {
   const loadGroups = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("alumni/academic-groups/");
+      const res = await api.get('alumni/academic-groups/');
       setGroups(res.data as AcademicGroup[]);
     } catch (error) {
-      console.error("Error loading academic groups", error);
-      toast.error(t("common.error"));
+      console.error('Error loading academic groups', error);
+      toast.error(t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -104,10 +110,8 @@ const AdminGroupsPage: React.FC = () => {
     loadGroups();
   }, [loadGroups]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    const nextValue = type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
-    setFormData((prev) => ({ ...prev, [name]: nextValue }));
+  const updateField = <K extends keyof GroupFormData>(field: K, value: GroupFormData[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const resetForm = () => {
@@ -115,21 +119,21 @@ const AdminGroupsPage: React.FC = () => {
     setEditingId(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSaving(true);
     try {
       if (editingId) {
         await api.patch(`alumni/academic-groups/${editingId}/`, toPayload(formData));
       } else {
-        await api.post("alumni/academic-groups/", toPayload(formData));
+        await api.post('alumni/academic-groups/', toPayload(formData));
       }
-      toast.success(t("common.success"));
+      toast.success(t('common.success'));
       resetForm();
       await loadGroups();
     } catch (error) {
-      console.error("Error saving academic group", error);
-      toast.error(t("common.error"));
+      console.error('Error saving academic group', error);
+      toast.error(t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -138,170 +142,129 @@ const AdminGroupsPage: React.FC = () => {
   const handleEdit = (group: AcademicGroup) => {
     setEditingId(group.id);
     setFormData(toFormData(group));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (group: AcademicGroup) => {
-    if (!window.confirm(t("common.confirmDelete"))) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await api.delete(`alumni/academic-groups/${group.id}/`);
-      toast.success(t("common.success"));
+      await api.delete(`alumni/academic-groups/${deleteTarget.id}/`);
+      toast.success(t('common.success'));
       await loadGroups();
-      if (editingId === group.id) resetForm();
+      if (editingId === deleteTarget.id) resetForm();
     } catch (error) {
-      console.error("Error deleting academic group", error);
-      toast.error(t("common.error"));
+      console.error('Error deleting academic group', error);
+      toast.error(t('common.error'));
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
   return (
-    <div className="space-y-6 px-4 md:px-10 py-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-800">{t("admin.groupsManagement")}</h1>
-        <p className="text-sm text-gray-500">{t("admin.groupsManagementHint")}</p>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('admin.groupsManagement')}
+        subtitle={t('admin.groupsManagementHint')}
+        icon={<Layers className="h-6 w-6" />}
+      />
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingId ? t('admin.editGroup') : t('admin.addGroup')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <InputField label={t('admin.groupName')} required value={formData.name} onChange={(event) => updateField('name', event.target.value)} placeholder="ИСТТ-1-21" />
+              <InputField label={t('admin.year')} type="number" value={formData.graduation_year} onChange={(event) => updateField('graduation_year', event.target.value)} placeholder="2026" />
+              <InputField label={t('admin.directionCode')} value={formData.direction_code} onChange={(event) => updateField('direction_code', event.target.value)} placeholder="710200" />
+              <InputField label={t('admin.directionName')} value={formData.direction_name} onChange={(event) => updateField('direction_name', event.target.value)} />
+              <InputField label={t('graduate.profileName')} value={formData.profile} onChange={(event) => updateField('profile', event.target.value)} className="md:col-span-2" />
+              <SelectField label={t('graduate.studyForm')} value={formData.study_form} onChange={(event) => updateField('study_form', event.target.value)}>
+                <option value="FULL_TIME">{t('graduate.fullTime')}</option>
+                <option value="PART_TIME">{t('graduate.partTime')}</option>
+              </SelectField>
+              <SelectField label={t('graduate.degreeLevel')} value={formData.degree_level} onChange={(event) => updateField('degree_level', event.target.value)}>
+                <option value="BACHELOR">{t('graduate.bachelor')}</option>
+                <option value="MASTER">{t('graduate.master')}</option>
+              </SelectField>
+              <InputField label={t('admin.totalGraduates')} type="number" value={formData.total_graduates} onChange={(event) => updateField('total_graduates', event.target.value)} />
+              <InputField label={t('admin.admissionCount')} type="number" value={formData.admission_count} onChange={(event) => updateField('admission_count', event.target.value)} />
+              <SwitchField label={t('admin.groupActive')} checked={formData.is_active} onChange={(checked) => updateField('is_active', checked)} className="md:col-span-2" />
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row md:col-span-2">
+                <Button type="submit" leftIcon={<Plus className="h-4 w-4" />} isLoading={saving}>
+                  {editingId ? t('common.save') : t('admin.addGroup')}
+                </Button>
+                {editingId && (
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    {t('common.cancel')}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('admin.groupsList')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <p className="py-8 text-center text-gray-500">{t('common.loading')}</p>
+            ) : sortedGroups.length ? (
+              <div className="space-y-3">
+                {sortedGroups.map((group) => (
+                  <article key={group.id} className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-primary-200 hover:shadow-md">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-bold text-gray-900">{group.name}</h3>
+                          <span className={group.is_active ? 'rounded-full bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-700 ring-1 ring-success-100' : 'rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200'}>
+                            {group.is_active ? t('admin.active') : t('admin.inactive')}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm leading-6 text-gray-500">
+                          {group.direction_code} · {group.profile || group.direction_name}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-gray-600">
+                          <span className="rounded-full bg-gray-50 px-2.5 py-1 ring-1 ring-gray-100">{group.graduation_year || t('common.notSpecified')}</span>
+                          <span className="rounded-full bg-gray-50 px-2.5 py-1 ring-1 ring-gray-100">{group.study_form_display || group.study_form}</span>
+                          <span className="rounded-full bg-gray-50 px-2.5 py-1 ring-1 ring-gray-100">{group.degree_level_display || group.degree_level}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 sm:justify-end">
+                        <Button size="sm" variant="outline" leftIcon={<Edit className="h-4 w-4" />} onClick={() => handleEdit(group)}>
+                          {t('common.edit')}
+                        </Button>
+                        <Button size="sm" variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => setDeleteTarget(group)}>
+                          {t('common.delete')}
+                        </Button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon={<Layers className="h-7 w-7" />} title={t('admin.noGroups')} description={t('common.noResults')} />
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{editingId ? t("admin.editGroup") : t("admin.addGroup")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.groupName")}</label>
-              <input name="name" required value={formData.name} onChange={handleChange} className="w-full border rounded-md px-3 py-2" placeholder="ИСТТ-1-21" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.year")}</label>
-              <input name="graduation_year" type="number" value={formData.graduation_year} onChange={handleChange} className="w-full border rounded-md px-3 py-2" placeholder="2026" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.directionCode")}</label>
-              <input name="direction_code" value={formData.direction_code} onChange={handleChange} className="w-full border rounded-md px-3 py-2" placeholder="710200" />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.directionName")}</label>
-              <input name="direction_name" value={formData.direction_name} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("graduate.profileName")}</label>
-              <input name="profile" value={formData.profile} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("graduate.studyForm")}</label>
-              <select name="study_form" value={formData.study_form} onChange={handleChange} className="w-full border rounded-md px-3 py-2">
-                <option value="FULL_TIME">{t("graduate.fullTime")}</option>
-                <option value="PART_TIME">{t("graduate.partTime")}</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("graduate.degreeLevel")}</label>
-              <select name="degree_level" value={formData.degree_level} onChange={handleChange} className="w-full border rounded-md px-3 py-2">
-                <option value="BACHELOR">{t("graduate.bachelor")}</option>
-                <option value="MASTER">{t("graduate.master")}</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.totalGraduates")}</label>
-              <input name="total_graduates" type="number" value={formData.total_graduates} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.admissionCount")}</label>
-              <input name="admission_count" type="number" value={formData.admission_count} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
-            </div>
-
-            <label className="flex items-center gap-2 text-sm text-gray-700 md:col-span-2 xl:col-span-3">
-              <input name="is_active" type="checkbox" checked={formData.is_active} onChange={handleChange} className="rounded border-gray-300" />
-              {t("admin.groupActive")}
-            </label>
-
-            <div className="flex flex-wrap gap-3 md:col-span-2 xl:col-span-3">
-              <Button type="submit" leftIcon={<Plus className="h-4 w-4" />} disabled={saving}>
-                {editingId ? t("common.save") : t("admin.addGroup")}
-              </Button>
-              {editingId && (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  {t("common.cancel")}
-                </Button>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("admin.groupsList")}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 text-center text-gray-500">{t("common.loading")}</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm text-gray-700">
-                <thead className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-6 py-3 text-left">{t("graduate.group")}</th>
-                    <th className="px-6 py-3 text-left">{t("admin.year")}</th>
-                    <th className="px-6 py-3 text-left">{t("graduate.direction")}</th>
-                    <th className="px-6 py-3 text-left">{t("graduate.profileName")}</th>
-                    <th className="px-6 py-3 text-left">{t("graduate.studyForm")}</th>
-                    <th className="px-6 py-3 text-left">{t("common.status")}</th>
-                    <th className="px-6 py-3 text-right">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {sortedGroups.map((group) => (
-                    <tr key={group.id} className="hover:bg-primary-50/40 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Layers className="h-4 w-4 text-primary-600" />
-                          {group.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">{group.graduation_year || t("common.notSpecified")}</td>
-                      <td className="px-6 py-4 min-w-[220px]">
-                        <div className="font-medium text-gray-900">{group.direction_code}</div>
-                        <div className="text-xs text-gray-500">{group.direction_name}</div>
-                      </td>
-                      <td className="px-6 py-4 min-w-[200px]">{group.profile || t("common.notSpecified")}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{group.study_form_display || group.study_form}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${group.is_active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                          {group.is_active ? t("admin.active") : t("admin.inactive")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="inline-flex gap-2">
-                          <Button size="sm" variant="outline" leftIcon={<Edit className="h-4 w-4" />} onClick={() => handleEdit(group)}>
-                            {t("common.edit")}
-                          </Button>
-                          <Button size="sm" variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => handleDelete(group)}>
-                            {t("common.delete")}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!sortedGroups.length && (
-                    <tr>
-                      <td className="px-6 py-10 text-center text-gray-500" colSpan={7}>{t("admin.noGroups")}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={t('common.confirmDelete')}
+        description={deleteTarget ? `${deleteTarget.name}. ${t('common.deleteDescription')}` : t('common.deleteDescription')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        loading={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

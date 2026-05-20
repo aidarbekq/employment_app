@@ -1,11 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link2, Pencil, Plus, Trash2, Upload } from "lucide-react";
-import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/Card";
-import Button from "@/components/common/Button";
-import { Input } from "@/components/common/Input";
-import api from "@/services/api";
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Handshake, Link2, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import api from '@/services/api';
+import Button from '@/components/common/Button';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import EmptyState from '@/components/common/EmptyState';
+import PageHeader from '@/components/common/PageHeader';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
+import { InputField, SwitchField, TextareaField } from '@/components/common/FormControls';
 
 interface Partner {
   id: number;
@@ -28,20 +31,20 @@ interface PartnerForm {
 }
 
 const initialForm: PartnerForm = {
-  name: "",
-  slug: "",
-  description: "",
-  website: "",
-  order: "100",
+  name: '',
+  slug: '',
+  description: '',
+  website: '',
+  order: '100',
   is_active: true,
 };
 
 const slugify = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[«»"']/g, "")
-    .replace(/[^a-z0-9а-яё]+/gi, "-")
-    .replace(/^-+|-+$/g, "") || "partner";
+    .replace(/[«»"']/g, '')
+    .replace(/[^a-z0-9а-яё]+/gi, '-')
+    .replace(/^-+|-+$/g, '') || 'partner';
 
 const AdminPartnersPage: React.FC = () => {
   const { t } = useTranslation();
@@ -49,22 +52,21 @@ const AdminPartnersPage: React.FC = () => {
   const [form, setForm] = useState<PartnerForm>(initialForm);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Partner | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const sortedPartners = useMemo(
-    () => [...partners].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)),
-    [partners]
-  );
+  const sortedPartners = useMemo(() => [...partners].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)), [partners]);
 
   const fetchPartners = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("employers/partners/");
+      const res = await api.get('employers/partners/');
       setPartners(res.data as Partner[]);
     } catch (error) {
-      console.error("Failed to load partners", error);
-      toast.error(t("common.error"));
+      console.error('Failed to load partners', error);
+      toast.error(t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -80,17 +82,11 @@ const AdminPartnersPage: React.FC = () => {
     setEditingId(null);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    const isCheckbox = e.target instanceof HTMLInputElement && e.target.type === "checkbox";
-    const checked = e.target instanceof HTMLInputElement ? e.target.checked : false;
+  const updateField = <K extends keyof PartnerForm>(field: K, value: PartnerForm[K]) => {
     setForm((prev) => {
-      const next = {
-        ...prev,
-        [name]: isCheckbox ? checked : value,
-      };
-      if (name === "name" && !editingId) {
-        next.slug = slugify(value);
+      const next = { ...prev, [field]: value };
+      if (field === 'name' && !editingId) {
+        next.slug = slugify(value as string);
       }
       return next;
     });
@@ -98,33 +94,31 @@ const AdminPartnersPage: React.FC = () => {
 
   const buildPayload = () => {
     const payload = new FormData();
-    payload.append("name", form.name);
-    payload.append("slug", form.slug);
-    payload.append("description", form.description);
-    payload.append("website", form.website);
-    payload.append("order", form.order || "100");
-    payload.append("is_active", String(form.is_active));
-    if (logoFile) {
-      payload.append("logo", logoFile);
-    }
+    payload.append('name', form.name);
+    payload.append('slug', form.slug);
+    payload.append('description', form.description);
+    payload.append('website', form.website);
+    payload.append('order', form.order || '100');
+    payload.append('is_active', String(form.is_active));
+    if (logoFile) payload.append('logo', logoFile);
     return payload;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSaving(true);
     try {
       if (editingId) {
         await api.patch(`employers/partners/${editingId}/`, buildPayload());
       } else {
-        await api.post("employers/partners/", buildPayload());
+        await api.post('employers/partners/', buildPayload());
       }
-      toast.success(t("common.success"));
+      toast.success(t('common.success'));
       resetForm();
       await fetchPartners();
     } catch (error) {
-      console.error("Failed to save partner", error);
-      toast.error(t("common.error"));
+      console.error('Failed to save partner', error);
+      toast.error(t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -136,72 +130,67 @@ const AdminPartnersPage: React.FC = () => {
     setForm({
       name: partner.name,
       slug: partner.slug,
-      description: partner.description || "",
-      website: partner.website || "",
+      description: partner.description || '',
+      website: partner.website || '',
       order: String(partner.order ?? 100),
       is_active: partner.is_active,
     });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (partner: Partner) => {
-    if (!confirm(t("common.confirmDelete"))) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await api.delete(`employers/partners/${partner.id}/`);
-      toast.success(t("common.success"));
+      await api.delete(`employers/partners/${deleteTarget.id}/`);
+      toast.success(t('common.success'));
       await fetchPartners();
+      if (editingId === deleteTarget.id) resetForm();
     } catch (error) {
-      console.error("Failed to delete partner", error);
-      toast.error(t("common.error"));
+      console.error('Failed to delete partner', error);
+      toast.error(t('common.error'));
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
   return (
-    <div className="space-y-6 px-4 md:px-10 py-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-800">{t("admin.partnersManagement")}</h1>
-        <p className="text-sm text-gray-500">{t("admin.partnersManagementHint")}</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('admin.partnersManagement')}
+        subtitle={t('admin.partnersManagementHint')}
+        icon={<Handshake className="h-6 w-6" />}
+      />
 
-      <div className="grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.85fr_1.15fr]">
         <Card>
           <CardHeader>
-            <CardTitle>{editingId ? t("admin.editPartner") : t("admin.addPartner")}</CardTitle>
+            <CardTitle>{editingId ? t('admin.editPartner') : t('admin.addPartner')}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input name="name" label={t("admin.partnerName")} value={form.name} onChange={handleChange} required />
-              <Input name="slug" label="Slug" value={form.slug} onChange={handleChange} required />
-              <Input name="website" label={t("admin.partnerWebsite")} value={form.website} onChange={handleChange} placeholder="https://example.com" />
-              <Input name="order" label={t("admin.partnerOrder")} value={form.order} onChange={handleChange} type="number" />
+              <InputField label={t('admin.partnerName')} required value={form.name} onChange={(event) => updateField('name', event.target.value)} />
+              <InputField label="Slug" required value={form.slug} onChange={(event) => updateField('slug', event.target.value)} />
+              <InputField label={t('admin.partnerWebsite')} value={form.website} onChange={(event) => updateField('website', event.target.value)} placeholder="https://example.com" />
+              <InputField label={t('admin.partnerOrder')} type="number" value={form.order} onChange={(event) => updateField('order', event.target.value)} />
+              <TextareaField label={t('admin.partnerDescription')} value={form.description} onChange={(event) => updateField('description', event.target.value)} rows={4} />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.partnerDescription")}</label>
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("admin.partnerLogo")}</label>
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50">
+                <p className="mb-1.5 text-sm font-semibold text-gray-700">{t('admin.partnerLogo')}</p>
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 bg-gray-50/70 px-4 py-4 text-sm font-medium text-gray-600 transition hover:border-primary-300 hover:bg-primary-50">
                   <Upload className="h-4 w-4" />
-                  {logoFile ? logoFile.name : t("admin.chooseLogo")}
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
+                  {logoFile ? logoFile.name : t('admin.chooseLogo')}
+                  <input type="file" accept="image/*" className="hidden" onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)} />
                 </label>
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input name="is_active" type="checkbox" checked={form.is_active} onChange={handleChange} className="h-4 w-4" />
-                {t("admin.partnerActive")}
-              </label>
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Button type="submit" disabled={saving} leftIcon={<Plus className="h-4 w-4" />}>
-                  {editingId ? t("common.save") : t("admin.addPartner")}
+              <SwitchField label={t('admin.partnerActive')} checked={form.is_active} onChange={(checked) => updateField('is_active', checked)} />
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                <Button type="submit" isLoading={saving} leftIcon={<Plus className="h-4 w-4" />}>
+                  {editingId ? t('common.save') : t('admin.addPartner')}
                 </Button>
                 {editingId && (
                   <Button type="button" variant="outline" onClick={resetForm}>
-                    {t("common.cancel")}
+                    {t('common.cancel')}
                   </Button>
                 )}
               </div>
@@ -211,51 +200,65 @@ const AdminPartnersPage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t("admin.partnersList")}</CardTitle>
+            <CardTitle>{t('admin.partnersList')}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-gray-500">{t("common.loading")}</p>
-            ) : (
+              <p className="py-8 text-center text-gray-500">{t('common.loading')}</p>
+            ) : sortedPartners.length ? (
               <div className="space-y-4">
                 {sortedPartners.map((partner) => (
-                  <div key={partner.id} className="rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row md:items-center gap-4 justify-between">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="h-14 w-14 shrink-0 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center overflow-hidden font-semibold text-primary-700">
-                        {partner.logo_url ? <img src={partner.logo_url} alt={partner.name} className="h-full w-full object-contain p-2" /> : partner.name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-gray-900 truncate">{partner.name}</h3>
-                          <span className={`rounded-full px-2 py-0.5 text-xs ${partner.is_active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                            {partner.is_active ? t("admin.active") : t("admin.inactive")}
-                          </span>
+                  <article key={partner.id} className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-primary-200 hover:shadow-md">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex min-w-0 items-center gap-4">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 to-accent-50 font-bold text-primary-700">
+                          {partner.logo_url ? <img src={partner.logo_url} alt={partner.name} className="h-full w-full object-contain p-2" /> : partner.name.slice(0, 2).toUpperCase()}
                         </div>
-                        <p className="text-sm text-gray-500 line-clamp-2">{partner.description || t("common.notSpecified")}</p>
-                        {partner.website && (
-                          <a href={partner.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm text-primary-600 hover:underline">
-                            <Link2 className="mr-1 h-3 w-3" />
-                            {partner.website}
-                          </a>
-                        )}
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate font-bold text-gray-900">{partner.name}</h3>
+                            <span className={partner.is_active ? 'rounded-full bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-700 ring-1 ring-success-100' : 'rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200'}>
+                              {partner.is_active ? t('admin.active') : t('admin.inactive')}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-500">{partner.description || t('common.notSpecified')}</p>
+                          {partner.website && (
+                            <a href={partner.website} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center text-sm font-medium text-primary-600 hover:underline">
+                              <Link2 className="mr-1 h-3.5 w-3.5" />
+                              {partner.website}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 md:justify-end">
+                        <Button size="sm" variant="outline" leftIcon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(partner)}>
+                          {t('common.edit')}
+                        </Button>
+                        <Button size="sm" variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => setDeleteTarget(partner)}>
+                          {t('common.delete')}
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2 md:justify-end">
-                      <Button size="sm" variant="outline" leftIcon={<Pencil className="h-4 w-4" />} onClick={() => handleEdit(partner)}>
-                        {t("common.edit")}
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => handleDelete(partner)}>
-                        {t("common.delete")}
-                      </Button>
-                    </div>
-                  </div>
+                  </article>
                 ))}
-                {!sortedPartners.length && <div className="text-center py-10 text-gray-500">{t("common.noResults")}</div>}
               </div>
+            ) : (
+              <EmptyState icon={<Handshake className="h-7 w-7" />} title={t('common.noResults')} description={t('common.emptyList')} />
             )}
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={t('common.confirmDelete')}
+        description={deleteTarget ? `${deleteTarget.name}. ${t('common.deleteDescription')}` : t('common.deleteDescription')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        loading={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
