@@ -2,7 +2,7 @@ from rest_framework import filters, permissions, viewsets
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
 from .models import Employer, Partner
-from .serializers import EmployerSerializer, PartnerSerializer
+from .serializers import AdminEmployerCreateSerializer, EmployerSerializer, PartnerSerializer
 
 
 class IsAdminUserRole(permissions.BasePermission):
@@ -25,13 +25,22 @@ class EmployerViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ["company_name", "address", "phone"]
 
+
+    def get_serializer_class(self):
+        if self.action == "create" and self.request.user.role == self.request.user.Roles.ADMIN:
+            return AdminEmployerCreateSerializer
+        return EmployerSerializer
+
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), IsEmployerOwnerOrReadOnly()]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        if self.request.user.role == self.request.user.Roles.ADMIN:
+            serializer.save()
+        else:
+            serializer.save(user=self.request.user)
 
     def get_queryset(self):
         user = self.request.user

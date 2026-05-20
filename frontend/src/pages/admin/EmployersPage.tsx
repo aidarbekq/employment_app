@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, Eye, MapPin, Phone, Search } from 'lucide-react';
+import { Building2, Eye, MapPin, Phone, Plus, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '@/services/api';
@@ -62,6 +62,11 @@ const EmployersPage: React.FC = () => {
         title={t('admin.employersListTitle')}
         subtitle={t('admin.employersListHint')}
         icon={<Building2 className="h-6 w-6" />}
+        actions={
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/admin/employers/create')}>
+            {t('admin.addEmployer')}
+          </Button>
+        }
       />
 
       <Card className="overflow-hidden">
