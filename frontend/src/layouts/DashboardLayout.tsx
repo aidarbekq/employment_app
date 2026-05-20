@@ -42,8 +42,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role }) => {
 
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader setSidebarOpen={setIsSidebarOpen} />
-          <main className="flex-1 p-4 sm:p-6 overflow-auto">
-            <div className="max-w-6xl mx-auto">
+          <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+            <div className="mx-auto max-w-7xl">
               <Outlet />
             </div>
           </main>
