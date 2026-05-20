@@ -39,7 +39,9 @@
     "registerSubtitle": "Create your account",
     "passwordMismatch": "Passwords do not match.",
     "registerError": "Registration failed. Please check your data.",
-    "registering": "Registering..."
+    "registering": "Registering...",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "home": {
     "heroTitle": "Graduate Employment Tracking for the Department",
@@ -67,7 +69,23 @@
     "mainProfiles": "Profiles",
     "mainProfilesText": "IST in telecommunications, information system software, IST in mining, AI information systems",
     "partnersDescription": "Partners are loaded from the database. Administrators can add, hide, reorder and edit partner company cards.",
-    "partnerWebsite": "Partner website"
+    "partnerWebsite": "Partner website",
+    "directionCodeAdditional": "Additional direction",
+    "directionNameIst": "Information systems and technologies",
+    "directionNamePzi": "Infocommunication technologies and communication systems",
+    "fullTime": "Full-time",
+    "partTime": "Part-time / distance",
+    "bachelor": "Bachelor",
+    "master": "Master",
+    "groupsAccounting": "Group accounting",
+    "groupsAccountingText": "Groups, graduation years and study forms are stored separately and used in reports.",
+    "educationTracks": "Directions and profiles",
+    "educationTracksText": "IST, ISTT, PZI and master tracks are supported without mixing data in one field.",
+    "employmentReports": "PDF reports",
+    "employmentReportsText": "Year, group, study form and status filters are applied to analytics and PDF export.",
+    "partnerManagement": "Partners",
+    "partnerManagementText": "Partner companies are managed from the admin panel and displayed on the homepage.",
+    "morePartners": "and {{count}} more partners"
   },
   "graduate": {
     "profile": "My Profile",
@@ -96,7 +114,11 @@
     "continuingEducationPlace": "Continuing education place",
     "isSurveyed": "Graduate surveyed",
     "usefulSubjects": "Useful subjects at work",
-    "selfStudyTopics": "Self-study topics"
+    "selfStudyTopics": "Self-study topics",
+    "bachelor": "Bachelor",
+    "master": "Master",
+    "degreeLevel": "Degree level",
+    "surveyInfo": "Survey details"
   },
   "employer": {
     "profile": "Profile",
@@ -169,7 +191,32 @@
     "exportPdf": "Export PDF",
     "surveyed": "Surveyed",
     "surveyedHint": "Graduates included in percentage calculations",
-    "statusPieChart": "Status pie chart"
+    "statusPieChart": "Status pie chart",
+    "reportFilters": "Report filters",
+    "reportFiltersHint": "These filters apply to cards, charts, the table and PDF export.",
+    "resetFilters": "Reset filters",
+    "allGroups": "All groups",
+    "allDirections": "All directions",
+    "allStudyForms": "All study forms",
+    "allDegreeLevels": "All degree levels",
+    "allStatuses": "All statuses",
+    "filteredReportHint": "By selected filters",
+    "totalGraduatesHint": "Graduates in the current selection",
+    "employedHint": "Employed in specialty, outside specialty or self-employed",
+    "tableSubtitle": "Year-by-year counts and percentages for each employment category.",
+    "employmentTrendHint": "Employment percentage by graduation year.",
+    "statusPieChartHint": "Graduate status distribution for the current selection.",
+    "groupsManagement": "Academic groups",
+    "groupsManagementHint": "Add graduate groups, directions, profiles, study forms and graduation years for accurate reporting.",
+    "addGroup": "Add group",
+    "editGroup": "Edit group",
+    "groupName": "Group name",
+    "directionCode": "Direction code",
+    "directionName": "Direction name",
+    "admissionCount": "Admission count",
+    "groupActive": "Group is active",
+    "groupsList": "Academic groups",
+    "noGroups": "No groups added yet"
   },
   "common": {
     "back": "Back",
@@ -191,7 +238,9 @@
     "oldestFirst": "Oldest → Newest",
     "tryAdjustingFilters": "Try adjusting the search or filter parameters",
     "all": "All",
-    "confirmDelete": "Are you sure you want to delete this?"
+    "confirmDelete": "Are you sure you want to delete this?",
+    "status": "Status",
+    "actions": "Actions"
   },
   "vacancy": {
     "myVacancies": "My Vacancies",
