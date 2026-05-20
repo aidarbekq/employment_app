@@ -9,7 +9,8 @@ import {
   BarChart,
   Building,
   LogOut,
-  Handshake
+  Handshake,
+  Layers
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
@@ -67,6 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, setIsOpen }) => {
             <NavLink to="/admin/employers" icon={<Building className="h-5 w-5" />} label={t('admin.employersManagement')} />
             <NavLink to="/admin/vacancies" icon={<Briefcase className="h-5 w-5" />} label={t('admin.vacanciesManagement')} />
             <NavLink to="/admin/partners" icon={<Handshake className="h-5 w-5" />} label={t('admin.partnersManagement')} />
+            <NavLink to="/admin/groups" icon={<Layers className="h-5 w-5" />} label={t('admin.groupsManagement')} />
           </>
         );
       default:

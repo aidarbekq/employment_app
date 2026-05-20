@@ -39,6 +39,7 @@ const AdminVacanciesPage = lazy(() => import('./pages/admin/AdminVacanciesPage')
 const AdminVacancyDetailPage = lazy(() => import('./pages/admin/AdminVacancyDetailPage'));
 const AdminVacancyEditPage = lazy(() => import('./pages/admin/AdminVacancyEditPage'));
 const AdminPartnersPage = lazy(() => import('./pages/admin/PartnersPage'));
+const AdminGroupsPage = lazy(() => import('./pages/admin/GroupsPage'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center text-gray-500">
@@ -90,6 +91,7 @@ function App() {
               <Route path="vacancies/:id" element={<AdminVacancyDetailPage />} />
               <Route path="vacancies/:id/edit" element={<AdminVacancyEditPage />} />
               <Route path="partners" element={<AdminPartnersPage />} />
+              <Route path="groups" element={<AdminGroupsPage />} />
             </Route>
 
             {/* Not found */}
