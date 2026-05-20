@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import Button from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { Card, CardContent } from "@/components/common/Card";
 import { useTranslation } from "react-i18next";
-import { BookOpen, Briefcase, Edit3, GraduationCap, Mail, UserCircle } from "lucide-react";
+import { BookOpen, Briefcase, CheckCircle, Edit3, GraduationCap, Mail, UserCircle } from "lucide-react";
 
 interface UserInfo {
   id: number;
@@ -20,11 +20,25 @@ interface UserInfo {
 interface AcademicGroup {
   id: number;
   name: string;
+  graduation_year: number | null;
+  direction_code: string;
+  direction_name: string;
+  profile: string;
+  study_form: string;
+  study_form_display?: string;
+  degree_level: string;
+  degree_level_display?: string;
 }
 
 type ProfileFormData = {
+  academic_group_id: string;
   graduation_year: string;
   specialty: string;
+  direction: string;
+  education_profile: string;
+  study_form: string;
+  degree_level: string;
+  is_surveyed: boolean;
   employment_status: string;
   workplace: string;
   position: string;
@@ -43,8 +57,11 @@ interface Profile {
   specialty: string | null;
   direction: string | null;
   profile: string | null;
+  study_form: string | null;
   study_form_display?: string;
+  degree_level: string | null;
   degree_level_display?: string;
+  is_surveyed: boolean;
   employment_status: string;
   employment_status_display?: string;
   workplace: string | null;
@@ -58,8 +75,14 @@ interface Profile {
 }
 
 const emptyForm: ProfileFormData = {
+  academic_group_id: "",
   graduation_year: "",
   specialty: "",
+  direction: "",
+  education_profile: "",
+  study_form: "",
+  degree_level: "BACHELOR",
+  is_surveyed: true,
   employment_status: "UNEMPLOYED",
   workplace: "",
   position: "",
@@ -79,19 +102,33 @@ const statusBadgeClass = (status: string) => {
   return "bg-yellow-50 text-yellow-700 border-yellow-100";
 };
 
+const inputClass = "rounded-xl border-gray-200 focus:ring-primary-500 focus:border-primary-500";
+
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [groups, setGroups] = useState<AcademicGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<ProfileFormData>(emptyForm);
 
+  const selectedGroup = useMemo(
+    () => groups.find((group) => String(group.id) === formData.academic_group_id) ?? null,
+    [groups, formData.academic_group_id]
+  );
+
   const fillForm = (item: Profile) => {
     const userInfo = typeof item.user === "object" ? item.user : null;
     setFormData({
-      graduation_year: item.graduation_year?.toString() || "",
+      academic_group_id: item.academic_group?.id ? String(item.academic_group.id) : "",
+      graduation_year: item.graduation_year?.toString() || item.academic_group?.graduation_year?.toString() || "",
       specialty: item.specialty || "",
+      direction: item.direction || item.academic_group?.direction_name || "",
+      education_profile: item.profile || item.academic_group?.profile || "",
+      study_form: item.study_form || item.academic_group?.study_form || "",
+      degree_level: item.degree_level || item.academic_group?.degree_level || "BACHELOR",
+      is_surveyed: item.is_surveyed ?? true,
       employment_status: item.employment_status || "UNEMPLOYED",
       workplace: item.workplace || "",
       position: item.position || "",
@@ -123,12 +160,35 @@ const ProfilePage: React.FC = () => {
   }, [user, t]);
 
   useEffect(() => {
+    api
+      .get("alumni/academic-groups/")
+      .then((res) => setGroups(res.data as AcademicGroup[]))
+      .catch(() => toast.error(t("common.error")));
+  }, [t]);
+
+  useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
+  };
+
+  const handleGroupChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const groupId = e.target.value;
+    const group = groups.find((item) => String(item.id) === groupId);
+
+    setFormData((prev) => ({
+      ...prev,
+      academic_group_id: groupId,
+      graduation_year: group?.graduation_year ? String(group.graduation_year) : prev.graduation_year,
+      direction: group?.direction_name || prev.direction,
+      education_profile: group?.profile || prev.education_profile,
+      study_form: group?.study_form || prev.study_form,
+      degree_level: group?.degree_level || prev.degree_level,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,8 +203,14 @@ const ProfilePage: React.FC = () => {
           email: formData.email,
         }),
         api.patch(`alumni/alumni-profiles/${profile.id}/`, {
+          academic_group_id: formData.academic_group_id ? Number(formData.academic_group_id) : null,
           graduation_year: formData.graduation_year ? Number(formData.graduation_year) : null,
           specialty: formData.specialty || null,
+          direction: formData.direction || null,
+          profile: formData.education_profile || null,
+          study_form: formData.study_form || null,
+          degree_level: formData.degree_level || "BACHELOR",
+          is_surveyed: formData.is_surveyed,
           employment_status: formData.employment_status,
           workplace: formData.workplace || null,
           position: formData.position || null,
@@ -166,20 +232,10 @@ const ProfilePage: React.FC = () => {
     setIsEditing(false);
   };
 
-  const personFields: Array<{ name: keyof Pick<ProfileFormData, "first_name" | "last_name" | "email">; label: string; type?: string }> = [
-    { name: "first_name", label: t("auth.firstName") },
-    { name: "last_name", label: t("auth.lastName") },
-    { name: "email", label: t("auth.email"), type: "email" },
-  ];
-
-  const employmentFields: Array<{ name: keyof Pick<ProfileFormData, "workplace" | "position" | "continuing_education_place">; label: string }> = [
-    { name: "workplace", label: t("graduate.workplace") },
-    { name: "position", label: t("graduate.position") },
-    { name: "continuing_education_place", label: t("graduate.continuingEducationPlace") },
-  ];
-
   const displayName = `${formData.first_name} ${formData.last_name}`.trim() || (typeof profile?.user === "object" ? profile.user.username : t("graduate.profile"));
   const statusLabel = profile?.employment_status_display || formData.employment_status;
+  const studyFormLabel = profile?.study_form_display || selectedGroup?.study_form_display || formData.study_form;
+  const degreeLevelLabel = profile?.degree_level_display || selectedGroup?.degree_level_display || formData.degree_level;
 
   const EmptyValue = () => <span className="text-gray-400 italic">{t("common.notSpecified")}</span>;
   const InfoItem = ({ label, value }: { label: string; value: React.ReactNode }) => {
@@ -204,7 +260,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden rounded-2xl border-gray-100 shadow-sm">
         <div className="bg-gradient-to-r from-primary-700 to-primary-900 px-6 py-8 text-white">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -220,9 +276,14 @@ const ProfilePage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <span className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold ${statusBadgeClass(profile.employment_status)}`}>
-              {statusLabel}
-            </span>
+            <div className="flex flex-wrap gap-2">
+              <span className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold ${statusBadgeClass(profile.employment_status)}`}>
+                {statusLabel}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+                {formData.is_surveyed ? t("graduate.isSurveyed") : t("graduate.notSurveyed")}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -237,10 +298,11 @@ const ProfilePage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   <InfoItem label={t("graduate.group")} value={profile.academic_group?.name} />
                   <InfoItem label={t("graduate.graduation_year")} value={formData.graduation_year} />
-                  <InfoItem label={t("graduate.studyForm")} value={profile.study_form_display} />
-                  <InfoItem label={t("graduate.degreeLevel")} value={profile.degree_level_display} />
-                  <InfoItem label={t("graduate.direction")} value={profile.direction} />
-                  <InfoItem label={t("graduate.profileName")} value={profile.profile || formData.specialty} />
+                  <InfoItem label={t("graduate.studyForm")} value={studyFormLabel} />
+                  <InfoItem label={t("graduate.degreeLevel")} value={degreeLevelLabel} />
+                  <InfoItem label={t("graduate.direction")} value={formData.direction} />
+                  <InfoItem label={t("graduate.profileName")} value={formData.education_profile || formData.specialty} />
+                  <InfoItem label={t("graduate.specialty")} value={formData.specialty} />
                 </div>
               </section>
 
@@ -274,30 +336,68 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-7">
               <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("admin.personalData")}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {personFields.map(({ name, label, type = "text" }) => (
-                    <Input key={name} id={name} name={name} label={label} type={type} value={formData[name]} onChange={handleChange} />
-                  ))}
+                  <Input id="first_name" name="first_name" label={t("auth.firstName")} value={formData.first_name} onChange={handleInputChange} className={inputClass} />
+                  <Input id="last_name" name="last_name" label={t("auth.lastName")} value={formData.last_name} onChange={handleInputChange} className={inputClass} />
+                  <Input id="email" name="email" label={t("auth.email")} type="email" value={formData.email} onChange={handleInputChange} className={inputClass} />
                 </div>
               </section>
 
               <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("admin.educationData")}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input id="graduation_year" name="graduation_year" label={t("graduate.graduation_year")} type="number" value={formData.graduation_year} onChange={handleChange} />
-                  <Input id="specialty" name="specialty" label={t("graduate.specialty")} value={formData.specialty} onChange={handleChange} />
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">{t("graduate.group")}</label>
+                    <select name="academic_group_id" value={formData.academic_group_id} onChange={handleGroupChange} className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                      <option value="">{t("common.notSpecified")}</option>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>{group.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input id="graduation_year" name="graduation_year" label={t("graduate.graduation_year")} type="number" value={formData.graduation_year} onChange={handleInputChange} className={inputClass} />
+                  <Input id="specialty" name="specialty" label={t("graduate.specialty")} value={formData.specialty} onChange={handleInputChange} className={inputClass} />
+                  <Input id="direction" name="direction" label={t("graduate.direction")} value={formData.direction} onChange={handleInputChange} className={inputClass} />
+                  <Input id="education_profile" name="education_profile" label={t("graduate.profileName")} value={formData.education_profile} onChange={handleInputChange} className={inputClass} />
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">{t("graduate.studyForm")}</label>
+                    <select name="study_form" value={formData.study_form} onChange={handleInputChange} className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                      <option value="">{t("common.notSpecified")}</option>
+                      <option value="FULL_TIME">{t("graduate.fullTime")}</option>
+                      <option value="PART_TIME">{t("graduate.partTime")}</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">{t("graduate.degreeLevel")}</label>
+                    <select name="degree_level" value={formData.degree_level} onChange={handleInputChange} className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                      <option value="BACHELOR">{t("graduate.bachelor")}</option>
+                      <option value="MASTER">{t("graduate.master")}</option>
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700">
+                    <input name="is_surveyed" type="checkbox" checked={formData.is_surveyed} onChange={handleInputChange} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                    <span className="inline-flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-primary-600" />
+                      {t("graduate.isSurveyed")}
+                    </span>
+                  </label>
                 </div>
+                {selectedGroup && (
+                  <p className="mt-3 text-sm text-primary-700 bg-primary-50 border border-primary-100 rounded-xl px-4 py-3">
+                    {t("admin.groupAutofillHint", { group: selectedGroup.name })}
+                  </p>
+                )}
               </section>
 
               <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("admin.employmentData")}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("graduate.employmentStatus")}</label>
-                    <select name="employment_status" value={formData.employment_status} onChange={handleChange} className="w-full border px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">{t("graduate.employmentStatus")}</label>
+                    <select name="employment_status" value={formData.employment_status} onChange={handleInputChange} className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
                       <option value="EMPLOYED_SPECIALTY">{t("graduate.employedSpecialty")}</option>
                       <option value="EMPLOYED_NOT_SPECIALTY">{t("graduate.employedNotSpecialty")}</option>
                       <option value="SELF_EMPLOYED">{t("graduate.selfEmployed")}</option>
@@ -306,9 +406,9 @@ const ProfilePage: React.FC = () => {
                       <option value="LOST_CONTACT">{t("graduate.lostContact")}</option>
                     </select>
                   </div>
-                  {employmentFields.map(({ name, label }) => (
-                    <Input key={name} id={name} name={name} label={label} value={formData[name]} onChange={handleChange} />
-                  ))}
+                  <Input id="workplace" name="workplace" label={t("graduate.workplace")} value={formData.workplace} onChange={handleInputChange} className={inputClass} />
+                  <Input id="position" name="position" label={t("graduate.position")} value={formData.position} onChange={handleInputChange} className={inputClass} />
+                  <Input id="continuing_education_place" name="continuing_education_place" label={t("graduate.continuingEducationPlace")} value={formData.continuing_education_place} onChange={handleInputChange} className={inputClass} />
                 </div>
               </section>
 
@@ -317,11 +417,11 @@ const ProfilePage: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t("graduate.usefulSubjects")}</label>
-                    <textarea name="useful_subjects" value={formData.useful_subjects} onChange={handleChange} rows={4} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <textarea name="useful_subjects" value={formData.useful_subjects} onChange={handleInputChange} rows={4} className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t("graduate.selfStudyTopics")}</label>
-                    <textarea name="self_study_topics" value={formData.self_study_topics} onChange={handleChange} rows={4} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <textarea name="self_study_topics" value={formData.self_study_topics} onChange={handleInputChange} rows={4} className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                 </div>
               </section>
