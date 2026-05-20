@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/common/Card";
 import Button from "@/components/common/Button";
-import { Download, FilterX, RefreshCw, TrendingUp, Users, UserCheck, Briefcase } from "lucide-react";
+import ExportMenu, { ExportFormat } from "@/components/common/ExportMenu";
+import { FilterX, RefreshCw, TrendingUp, Users, UserCheck, Briefcase } from "lucide-react";
 import api from "@/services/api";
 import {
   Area,
@@ -110,7 +111,7 @@ const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<StatsResponse>({});
   const [groups, setGroups] = useState<AcademicGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
 
   const params = useMemo(() => buildCleanParams(filters), [filters]);
@@ -195,19 +196,19 @@ const AdminDashboardPage: React.FC = () => {
 
   const resetFilters = () => setFilters(EMPTY_FILTERS);
 
-  const handleExportPdf = async () => {
-    setExporting(true);
+  const handleExport = async (format: ExportFormat) => {
+    setExportingFormat(format);
     try {
-      const res = await api.get("analytics/employment-report.pdf", {
+      const res = await api.get(`analytics/employment-report.${format}`, {
         params,
         responseType: "blob",
       });
       const suffix = filters.graduation_year || filters.academic_group || filters.direction_code || "all";
-      downloadBlob(res.data as Blob, `employment_report_${suffix}.pdf`);
+      downloadBlob(res.data as Blob, `employment_report_${suffix}.${format}`);
     } catch (error) {
-      console.error("Error exporting PDF", error);
+      console.error("Error exporting report", error);
     } finally {
-      setExporting(false);
+      setExportingFormat(null);
     }
   };
 
@@ -278,9 +279,7 @@ const AdminDashboardPage: React.FC = () => {
           <Button variant="outline" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={fetchStats}>
             {t("admin.refresh")}
           </Button>
-          <Button variant="outline" size="sm" leftIcon={<Download className="h-4 w-4" />} onClick={handleExportPdf} disabled={exporting}>
-            {t("admin.exportPdf")}
-          </Button>
+          <ExportMenu onSelect={handleExport} isLoading={Boolean(exportingFormat)} />
         </div>
       </div>
 

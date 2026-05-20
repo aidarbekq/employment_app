@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   Briefcase,
   Calendar,
-  Download,
   Eye,
   FileText,
   GraduationCap,
@@ -15,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
+import ExportMenu, { ExportFormat } from '@/components/common/ExportMenu';
 import EmptyState from '@/components/common/EmptyState';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
@@ -73,7 +73,7 @@ const AdminGraduatesPage: React.FC = () => {
   const [studyFormFilter, setStudyFormFilter] = useState('');
   const [degreeLevelFilter, setDegreeLevelFilter] = useState('');
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
   const navigate = useNavigate();
 
   const buildParams = useCallback(() => {
@@ -111,18 +111,19 @@ const AdminGraduatesPage: React.FC = () => {
     fetchGraduates();
   }, [fetchGraduates]);
 
-  const handleExportPdf = async () => {
-    setExporting(true);
+  const handleExport = async (format: ExportFormat) => {
+    setExportingFormat(format);
     try {
-      const res = await api.get('analytics/employment-report.pdf', {
+      const res = await api.get(`analytics/employment-report.${format}`, {
         params: buildParams(),
         responseType: 'blob',
       });
-      downloadBlob(res.data as Blob, 'employment_report.pdf');
+      const suffix = yearFilter || groupFilter || statusFilter || 'all';
+      downloadBlob(res.data as Blob, `employment_report_${suffix}.${format}`);
     } catch (error) {
-      console.error('Error exporting PDF', error);
+      console.error('Error exporting report', error);
     } finally {
-      setExporting(false);
+      setExportingFormat(null);
     }
   };
 
@@ -156,9 +157,7 @@ const AdminGraduatesPage: React.FC = () => {
         icon={<GraduationCap className="h-6 w-6" />}
         actions={
           <>
-            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={handleExportPdf} isLoading={exporting}>
-              {t('admin.exportPdf')}
-            </Button>
+            <ExportMenu onSelect={handleExport} isLoading={Boolean(exportingFormat)} />
             <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/admin/graduates/create')}>
               {t('admin.addGraduate')}
             </Button>
