@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Building2, Mail, MapPin, Pencil, Phone, Save, Trash2, UserCircle } from 'lucide-react';
+import { ArrowLeft, Building2, KeyRound, Mail, MapPin, Pencil, Phone, Save, Trash2, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
@@ -105,6 +105,9 @@ const AdminEmployerDetailPage: React.FC = () => {
           <>
             <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate('/admin/employers')}>
               {t('common.backToList')}
+            </Button>
+            <Button variant="outline" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => navigate(`/admin/users/${employer.user.id}/password`)}>
+              {t('security.changePassword')}
             </Button>
             <Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => setShowConfirm(true)}>
               {t('common.delete')}

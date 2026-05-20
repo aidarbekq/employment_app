@@ -10,7 +10,8 @@ import {
   Building,
   LogOut,
   Handshake,
-  Layers
+  Layers,
+  ShieldCheck
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
@@ -49,6 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, setIsOpen }) => {
           <>
             <NavLink to="/graduate/profile" icon={<User className="h-5 w-5" />} label={t('graduate.profile')} />
             <NavLink to="/graduate/resume" icon={<FileText className="h-5 w-5" />} label={t('graduate.resume')} />
+            <NavLink to="/graduate/security" icon={<ShieldCheck className="h-5 w-5" />} label={t('security.menu')} />
             <NavLink to="/graduate/vacancies" icon={<FileText className="h-5 w-5" />} label={t('admin.vacanciesManagement')} />
           </>
         );
@@ -58,6 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, setIsOpen }) => {
             <NavLink to="/employer/dashboard" icon={<BarChart className="h-5 w-5" />} label={t('employer.dashboard')} />
             <NavLink to="/employer/vacancies" icon={<Briefcase className="h-5 w-5" />} label={t('employer.vacancies')} />
             <NavLink to="/employer/graduates" icon={<GraduationCap className="h-5 w-5" />} label={t('employer.graduates')} />
+            <NavLink to="/employer/security" icon={<ShieldCheck className="h-5 w-5" />} label={t('security.menu')} />
           </>
         );
       case 'admin':

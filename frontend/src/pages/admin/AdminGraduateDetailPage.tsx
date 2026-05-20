@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, GraduationCap, Save, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, GraduationCap, KeyRound, Save, Trash2, UserRound } from 'lucide-react';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -224,6 +224,9 @@ const AdminGraduateDetailPage: React.FC = () => {
           <>
             <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate('/admin/graduates')}>
               {t('common.backToList')}
+            </Button>
+            <Button variant="outline" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => navigate(`/admin/users/${graduate.user.id}/password`)}>
+              {t('security.changePassword')}
             </Button>
             <Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => setShowDeleteDialog(true)}>
               {t('common.delete')}

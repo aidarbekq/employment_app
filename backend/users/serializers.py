@@ -1,6 +1,8 @@
-from rest_framework import serializers
-from .models import User
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
+
+from .models import User
+
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """
@@ -45,3 +47,44 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "username", "email", "first_name", "last_name", "role")
         read_only_fields = ("username", "role")
+
+
+class ChangeOwnPasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False, validators=[validate_password])
+    new_password2 = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_current_password(self, value):
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError({"new_password2": "Password fields didn’t match."})
+        if attrs["current_password"] == attrs["new_password"]:
+            raise serializers.ValidationError({"new_password": "New password must be different from the current password."})
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user
+
+
+class AdminPasswordResetSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False, validators=[validate_password])
+    new_password2 = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError({"new_password2": "Password fields didn’t match."})
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.context["target_user"]
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user

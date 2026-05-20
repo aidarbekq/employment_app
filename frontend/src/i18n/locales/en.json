@@ -101,7 +101,7 @@
     "employedNotSpecialty": "Employed outside specialty",
     "selfEmployed": "Self-employed",
     "continuingEducation": "Continuing education",
-    "lostContact": "Lost contact",
+    "lostContact": "Unknown",
     "workplace": "Workplace",
     "continuingEducationPlace": "Continuing education place",
     "isSurveyed": "Graduate surveyed",
@@ -150,7 +150,7 @@
     "unemployed": "Unemployed",
     "percentEmployed": "% Employed",
     "tableTitle": "Employment stats per year",
-    "employmentTrend": "Employment Rate Trend",
+    "employmentTrend": "Employment dynamics by year",
     "year": "Year",
     "employersListTitle": "List of Employers",
     "searchEmployersPlaceholder": "Search by name, address, description...",
@@ -198,10 +198,10 @@
     "totalGraduatesHint": "Graduates in the current selection",
     "employedHint": "Employed in specialty, outside specialty or self-employed",
     "tableSubtitle": "Year-by-year counts and percentages for each employment category.",
-    "employmentTrendHint": "Employment percentage by graduation year.",
+    "employmentTrendHint": "Bars show graduates by category; the line shows the overall employment rate.",
     "statusPieChartHint": "Graduate status distribution for the current selection.",
     "groupsManagement": "Academic groups",
-    "groupsManagementHint": "Add graduate groups, directions, profiles, study forms and graduation years for accurate reporting.",
+    "groupsManagementHint": "Add graduate groups, direction, profile, study form and graduation year for accurate reporting.",
     "addGroup": "Add group",
     "editGroup": "Edit group",
     "groupName": "Group name",
@@ -221,7 +221,11 @@
     "exportFormatDocx": "Word (DOCX)",
     "exportFormatDocxHint": "For editing in Microsoft Word.",
     "exportFormatXlsx": "Excel",
-    "exportFormatXlsxHint": "For table analysis and calculations."
+    "exportFormatXlsxHint": "For table analysis and calculations.",
+    "addEmployer": "Add employer",
+    "addEmployerHint": "The administrator creates an employer account and organization profile.",
+    "addEmployerSideTitle": "Login details",
+    "addEmployerSideText": "After creation, the employer can sign in, update the company profile and manage vacancies."
   },
   "common": {
     "back": "Back",
@@ -462,5 +466,23 @@
         }
       ]
     }
+  },
+  "security": {
+    "menu": "Security",
+    "title": "Account security",
+    "subtitle": "Change the password to protect access to the dashboard.",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "savePassword": "Save password",
+    "passwordChanged": "Password updated",
+    "passwordChangeError": "Could not change the password. Check the entered data.",
+    "recommendationsTitle": "Recommendations",
+    "recommendationsText": "Use a long password with letters, numbers and symbols. Do not share your password with other users.",
+    "adminTitle": "Change user password",
+    "setNewPassword": "Set a new password",
+    "adminNoticeTitle": "Administrative action",
+    "adminNoticeText": "The new password replaces the old one immediately. Share it with the user through a secure channel."
   }
 }

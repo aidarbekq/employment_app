@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Building2, Edit3, Mail, MapPin, Phone, UserCircle } from "lucide-react";
+import { Building2, Edit3, KeyRound, Mail, MapPin, Phone, UserCircle } from "lucide-react";
 import Button from "@/components/common/Button";
 import { Card, CardContent } from "@/components/common/Card";
 import { InputField, TextareaField } from "@/components/common/FormControls";
@@ -47,6 +48,7 @@ const emptyForm: EmployerFormData = {
 const EmployerPage: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<EmployerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -167,14 +169,24 @@ const EmployerPage: React.FC = () => {
               </div>
             </div>
             {!isEditing && (
-              <Button
-                leftIcon={<Edit3 className="h-4 w-4" />}
-                onClick={() => setIsEditing(true)}
-                variant="outline"
-                className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white focus:ring-white/60"
-              >
-                {t("common.edit")}
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  leftIcon={<KeyRound className="h-4 w-4" />}
+                  onClick={() => navigate('/employer/security')}
+                  variant="outline"
+                  className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white focus:ring-white/60"
+                >
+                  {t("security.changePassword")}
+                </Button>
+                <Button
+                  leftIcon={<Edit3 className="h-4 w-4" />}
+                  onClick={() => setIsEditing(true)}
+                  variant="outline"
+                  className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white focus:ring-white/60"
+                >
+                  {t("common.edit")}
+                </Button>
+              </div>
             )}
           </div>
         </div>

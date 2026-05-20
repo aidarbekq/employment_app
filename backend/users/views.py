@@ -1,6 +1,20 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from .models import User
-from .serializers import UserRegistrationSerializer, UserSerializer
+from .serializers import (
+    AdminPasswordResetSerializer,
+    ChangeOwnPasswordSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
+)
+
+
+class IsAdminUserRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.role == request.user.Roles.ADMIN)
+
 
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -26,4 +40,28 @@ class AdminUserDetailView(generics.RetrieveUpdateAPIView):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (permissions.IsAdminUser,)
+    permission_classes = (IsAdminUserRole,)
+
+
+class ChangeOwnPasswordView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        serializer = ChangeOwnPasswordSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
+
+
+class AdminChangeUserPasswordView(APIView):
+    permission_classes = (IsAdminUserRole,)
+
+    def post(self, request, pk: int):
+        target_user = generics.get_object_or_404(User, pk=pk)
+        serializer = AdminPasswordResetSerializer(
+            data=request.data,
+            context={"request": request, "target_user": target_user},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)

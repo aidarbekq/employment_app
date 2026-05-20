@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -6,7 +7,7 @@ import Button from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { Card, CardContent } from "@/components/common/Card";
 import { useTranslation } from "react-i18next";
-import { BookOpen, Briefcase, CheckCircle, Edit3, GraduationCap, Mail, UserCircle } from "lucide-react";
+import { BookOpen, Briefcase, CheckCircle, Edit3, GraduationCap, KeyRound, Mail, UserCircle } from "lucide-react";
 
 interface UserInfo {
   id: number;
@@ -107,6 +108,7 @@ const inputClass = "rounded-xl border-gray-200 focus:ring-primary-500 focus:bord
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [groups, setGroups] = useState<AcademicGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -329,7 +331,10 @@ const ProfilePage: React.FC = () => {
                 </div>
               </section>
 
-              <div className="pt-2 text-right">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                <Button variant="outline" leftIcon={<KeyRound className="h-4 w-4" />} onClick={() => navigate('/graduate/security')}>
+                  {t("security.changePassword")}
+                </Button>
                 <Button leftIcon={<Edit3 className="h-4 w-4" />} onClick={() => setIsEditing(true)}>
                   {t("common.edit")}
                 </Button>

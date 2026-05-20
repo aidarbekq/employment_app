@@ -15,6 +15,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
 const DashboardRedirect = lazy(() => import('@/pages/DashboardRedirect'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
 
 // Graduate pages
 const GraduateProfilePage = lazy(() => import('./pages/graduate/ProfilePage'));
@@ -42,6 +43,8 @@ const AdminVacancyDetailPage = lazy(() => import('./pages/admin/AdminVacancyDeta
 const AdminVacancyEditPage = lazy(() => import('./pages/admin/AdminVacancyEditPage'));
 const AdminPartnersPage = lazy(() => import('./pages/admin/PartnersPage'));
 const AdminGroupsPage = lazy(() => import('./pages/admin/GroupsPage'));
+const AdminUserPasswordPage = lazy(() => import('./pages/admin/AdminUserPasswordPage'));
+const AdminEmployerCreatePage = lazy(() => import('./pages/admin/AdminEmployerCreatePage'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center text-gray-500">
@@ -69,6 +72,7 @@ function App() {
             <Route path="/graduate" element={<DashboardLayout role="graduate" />}>
               <Route path="profile" element={<GraduateProfilePage />} />
               <Route path="resume" element={<GraduateResumePage />} />
+              <Route path="security" element={<ChangePasswordPage />} />
               <Route path="vacancies" element={<GraduateVacanciesPage />} />
               <Route path="vacancies/:id" element={<GraduateVacancyDetailPage />} />
             </Route>
@@ -79,6 +83,7 @@ function App() {
               <Route path="graduates" element={<EmployerGraduatesPage />} />
               <Route path="graduates/:id" element={<EmployerGraduateDetailPage />} />
               <Route path="vacancies" element={<EmployerVacanciesPage />} />
+              <Route path="security" element={<ChangePasswordPage />} />
               <Route path="vacancies/create" element={<VacancyCreatePage />} />
               <Route path="vacancies/:id/edit" element={<VacancyEditPage />} />
             </Route>
@@ -90,7 +95,9 @@ function App() {
               <Route path="graduates/create" element={<AdminGraduateCreatePage />} />
               <Route path="graduates/:id" element={<AdminGraduateDetailPage />} />
               <Route path="employers" element={<AdminEmployersPage />} />
+              <Route path="employers/create" element={<AdminEmployerCreatePage />} />
               <Route path="employers/:id" element={<AdminEmployerDetailPage />} />
+              <Route path="users/:userId/password" element={<AdminUserPasswordPage />} />
               <Route path="vacancies" element={<AdminVacanciesPage />} />
               <Route path="vacancies/:id" element={<AdminVacancyDetailPage />} />
               <Route path="vacancies/:id/edit" element={<AdminVacancyEditPage />} />
