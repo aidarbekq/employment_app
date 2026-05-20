@@ -62,7 +62,7 @@
     "departmentBadge": "IST Department named after Acad. A. Zhainakov",
     "departmentLabel": "For the department",
     "departmentTitle": "Information Systems and Technologies named after Academician A. Zhainakov",
-    "departmentDescription": "The system centralizes graduate records, groups, directions, profiles, study forms, employment status, continuing education and employer cooperation.",
+    "departmentDescription": "The system helps the department keep graduate, group, study direction and partner data in one place.",
     "directionCode": "Study direction",
     "institute": "Institute",
     "instituteName": "Institute of Electronics and Telecommunications",
@@ -85,7 +85,8 @@
     "employmentReportsText": "Year, group, study form and status filters are applied to analytics and PDF export.",
     "partnerManagement": "Partners",
     "partnerManagementText": "Partner companies are managed from the admin panel and displayed on the homepage.",
-    "morePartners": "and {{count}} more partners"
+    "morePartners": "and {{count}} more partners",
+    "partnersLabel": "Companies and organizations"
   },
   "graduate": {
     "profile": "My Profile",
@@ -118,7 +119,8 @@
     "bachelor": "Bachelor",
     "master": "Master",
     "degreeLevel": "Degree level",
-    "surveyInfo": "Survey details"
+    "surveyInfo": "Survey details",
+    "notSurveyed": "Not surveyed"
   },
   "employer": {
     "profile": "Profile",
