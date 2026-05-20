@@ -326,10 +326,141 @@
     "Contact Us": "Contact Us",
     "Quick Links": "Quick Links",
     "About University": "About University",
-    "Career Center": "Career Center",
-    "Academic Programs": "Academic Programs",
     "Privacy Policy": "Privacy Policy",
     "Terms of Service": "Terms of Service",
-    "All Rights Reserved": "All Rights Reserved"
+    "All Rights Reserved": "All Rights Reserved",
+    "address": "Polytechnic University, Bishkek, Kyrgyzstan",
+    "departmentSystem": "Department system"
+  },
+  "legal": {
+    "lastUpdated": "Last updated",
+    "lastUpdatedValue": "May 2026",
+    "contactTitle": "Data contact",
+    "contactText": "For data-related questions, contact the responsible department administrator or use the university's official contact channel.",
+    "privacy": {
+      "badge": "Data protection",
+      "title": "Privacy Policy",
+      "subtitle": "This page explains what data is used in the graduate employment tracking system and how access to it is protected.",
+      "summaryTitle": "In brief",
+      "summaryText": "The system processes only the data needed for profiles, vacancies, analytics and department reports. Access depends on the user's role.",
+      "safeData": "Role-based access",
+      "sections": [
+        {
+          "title": "Data we process",
+          "body": "The system may store account details, contact information, education data, employment status, workplace, position, resumes, employer records and vacancies.",
+          "items": [
+            "for graduates: full name, group, graduation year, direction, profile, study form, employment status and survey details;",
+            "for employers: organization name, contacts, company description and posted vacancies;",
+            "for administrators: account data and actions for managing directories, reports and profiles."
+          ]
+        },
+        {
+          "title": "How data is used",
+          "body": "Data is used to maintain graduate and employer profiles, publish vacancies, prepare statistics, generate reports and keep the department database up to date.",
+          "items": [
+            "analytics by year, group, direction and employment status;",
+            "report export to PDF, Word and Excel;",
+            "data review and correction by system administrators."
+          ]
+        },
+        {
+          "title": "Who can access data",
+          "body": "Data access is limited by user role. Graduates manage their own profile, employers manage their company and vacancies, and administrators maintain department data and reporting.",
+          "items": [
+            "graduates can view and update their own information;",
+            "employers can access data required for vacancies and graduate interaction;",
+            "administrators have extended access for database maintenance and reporting."
+          ]
+        },
+        {
+          "title": "Reports and exports",
+          "body": "Exported reports may include information about graduates, groups, employment and continuing education. For this reason, report export is limited to administrative users.",
+          "items": [
+            "before sharing a report, the administrator should check its purpose and data scope;",
+            "reports should be stored and shared only when there is a work-related need."
+          ]
+        },
+        {
+          "title": "Technical safeguards",
+          "body": "The system uses authentication, access tokens and role-based permissions. Account credentials must not be shared with other users.",
+          "items": [
+            "users are responsible for keeping their username and password secure;",
+            "suspected unauthorized access should be reported to an administrator;",
+            "authorization tokens are stored in the user's browser and removed on logout."
+          ]
+        },
+        {
+          "title": "Updating and correcting data",
+          "body": "Users can update profile fields available to their role. If any information is incorrect or requires clarification, contact the department administrator.",
+          "items": [
+            "graduates can update education and employment details in their account;",
+            "administrators can correct data required for department reporting."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "badge": "Usage rules",
+      "title": "Terms of Service",
+      "subtitle": "These terms describe how graduates, employers and administrators should use the system.",
+      "summaryTitle": "Core principle",
+      "summaryText": "The system is intended for department employment tracking, employer interaction and reporting. Data should be accurate and used responsibly.",
+      "responsibleUse": "Responsible use",
+      "sections": [
+        {
+          "title": "Purpose of the system",
+          "body": "The platform is used to track department graduates, manage employer profiles, publish vacancies and prepare employment analytics reports.",
+          "items": [
+            "graduates fill in their profile and employment information;",
+            "employers publish vacancies and update company data;",
+            "administrators manage reference data, users and reports."
+          ]
+        },
+        {
+          "title": "User account",
+          "body": "Users are responsible for the correctness of registration data and the security of their account.",
+          "items": [
+            "do not share login credentials with other people;",
+            "update the profile when education or employment details change;",
+            "administrators may clarify or correct data needed for reporting."
+          ]
+        },
+        {
+          "title": "Content and records",
+          "body": "Users must not upload false information, unrelated personal data, harmful files, spam or content unrelated to employment and department work.",
+          "items": [
+            "vacancies should clearly describe the position, requirements and conditions;",
+            "resumes and documents should relate to the user's profile;",
+            "administrators may delete or hide incorrect records."
+          ]
+        },
+        {
+          "title": "Reports and exports",
+          "body": "Reports are intended for internal department analytics, certificates, graduate employment monitoring and education program indicators.",
+          "items": [
+            "report filters should match the required year, group, study form or status;",
+            "exported files should be used only for their intended purpose;",
+            "data should be reviewed before official use of a report."
+          ]
+        },
+        {
+          "title": "Limitations",
+          "body": "The system helps centralize data and automate reports, but final analytics quality depends on the completeness and freshness of information entered by users and administrators.",
+          "items": [
+            "employment details need regular updates;",
+            "incorrect data should be corrected after it is found;",
+            "administrators are responsible for final report checks before use."
+          ]
+        },
+        {
+          "title": "Changes to these terms",
+          "body": "These terms may be updated as the system evolves, reporting requirements change or new features are added. The current version is available on this page.",
+          "items": [
+            "changes apply after the updated version is published;",
+            "continued use of the system means using it under the current rules."
+          ]
+        }
+      ]
+    }
   }
 }
