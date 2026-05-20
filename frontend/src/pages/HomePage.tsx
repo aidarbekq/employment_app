@@ -180,7 +180,20 @@ const HomePage: React.FC = () => {
               {t('home.heroSubtitle')}
             </p>
 
-            {!user && (
+            {user ? (
+              <div className="flex justify-center">
+                <Link to="/dashboard" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="white"
+                    rightIcon={<ArrowRight className="h-4 w-4" />}
+                    className="w-full sm:w-auto shadow-lg shadow-primary-950/20"
+                  >
+                    {t('nav.dashboard')}
+                  </Button>
+                </Link>
+              </div>
+            ) : (
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link to="/login" className="w-full sm:w-auto">
                   <Button size="lg" className="w-full sm:w-auto shadow-lg shadow-primary-950/20">

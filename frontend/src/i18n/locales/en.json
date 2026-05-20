@@ -111,7 +111,8 @@
     "master": "Master",
     "degreeLevel": "Degree level",
     "surveyInfo": "Survey details",
-    "notSurveyed": "Not surveyed"
+    "notSurveyed": "Not surveyed",
+    "confirmDelete": "Delete this graduate?"
   },
   "employer": {
     "profile": "Profile",
@@ -209,7 +210,9 @@
     "admissionCount": "Admission count",
     "groupActive": "Group is active",
     "groupsList": "Academic groups",
-    "noGroups": "No groups added yet"
+    "noGroups": "No groups added yet",
+    "employersListHint": "Search and review organization cards that work with department graduates.",
+    "vacanciesListHint": "All employer vacancies with quick preview and filtering."
   },
   "common": {
     "back": "Back",
@@ -233,7 +236,14 @@
     "all": "All",
     "confirmDelete": "Are you sure you want to delete this?",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "deleteDescription": "This action cannot be undone.",
+    "backToList": "Back to list",
+    "clearFilters": "Clear filters",
+    "details": "Details",
+    "saving": "Saving...",
+    "emptyList": "The list is empty",
+    "showMore": "Show more"
   },
   "vacancy": {
     "myVacancies": "My Vacancies",
@@ -270,7 +280,15 @@
     "status": "Status",
     "active": "Active",
     "inactive": "Inactive",
-    "vacanciesList": "Vacancies List"
+    "vacanciesList": "Vacancies List",
+    "formHint": "Fill in the main vacancy details. Required fields are marked with an asterisk.",
+    "salaryHint": "Leave empty if salary is discussed individually.",
+    "activeHint": "Active vacancies are visible to graduates.",
+    "descriptionHint": "Describe tasks, requirements and conditions clearly for graduates.",
+    "details": "Vacancy details",
+    "backToVacancies": "Back to vacancies",
+    "successDelete": "Vacancy deleted",
+    "errorDelete": "Failed to delete vacancy"
   },
   "resume": {
     "title": "Upload Resume",
@@ -292,7 +310,8 @@
     "tipOne": "Try to keep it to one page",
     "tipTwo": "Highlight key skills and achievements",
     "tipThree": "Include GPA if it's above 3.0",
-    "tipFour": "Mention relevant courses, projects, or volunteering"
+    "tipFour": "Mention relevant courses, projects, or volunteering",
+    "confirmDelete": "Delete the uploaded resume? This action cannot be undone."
   },
   "footer": {
     "Contact Us": "Contact Us",
