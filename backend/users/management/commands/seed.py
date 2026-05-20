@@ -30,8 +30,6 @@ GROUPS: list[dict[str, Any]] = [
         "profile": "Информационные системы и технологии в телекоммуникациях",
         "study_form": AcademicGroup.StudyForm.FULL_TIME,
         "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
-        "total_graduates": 24,
-        "admission_count": 25,
     },
     {
         "name": "ИСТ-1-21",
@@ -41,8 +39,6 @@ GROUPS: list[dict[str, Any]] = [
         "profile": "Программное обеспечение информационных систем",
         "study_form": AcademicGroup.StudyForm.FULL_TIME,
         "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
-        "total_graduates": 18,
-        "admission_count": 20,
     },
     {
         "name": "ПЗИдот-1-21",
@@ -52,8 +48,6 @@ GROUPS: list[dict[str, Any]] = [
         "profile": "Программно-защищенные инфокоммуникации",
         "study_form": AcademicGroup.StudyForm.PART_TIME,
         "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
-        "total_graduates": 9,
-        "admission_count": 9,
     },
     {
         "name": "ИСТТдот-1-20",
@@ -63,8 +57,6 @@ GROUPS: list[dict[str, Any]] = [
         "profile": "Информационные системы и технологии в телекоммуникациях",
         "study_form": AcademicGroup.StudyForm.PART_TIME,
         "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
-        "total_graduates": 22,
-        "admission_count": 22,
     },
     {
         "name": "ИСТд-1-20",
@@ -74,8 +66,6 @@ GROUPS: list[dict[str, Any]] = [
         "profile": "Программное обеспечение информационных систем",
         "study_form": AcademicGroup.StudyForm.PART_TIME,
         "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
-        "total_graduates": 16,
-        "admission_count": 17,
     },
     {
         "name": "ИСТТ-1-20",
@@ -85,8 +75,6 @@ GROUPS: list[dict[str, Any]] = [
         "profile": "Информационные системы и технологии в телекоммуникациях",
         "study_form": AcademicGroup.StudyForm.FULL_TIME,
         "degree_level": AcademicGroup.DegreeLevel.BACHELOR,
-        "total_graduates": 20,
-        "admission_count": 20,
     },
 ]
 

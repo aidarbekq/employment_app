@@ -33,16 +33,6 @@ class AcademicGroup(models.Model):
         choices=DegreeLevel.choices,
         default=DegreeLevel.BACHELOR,
     )
-    total_graduates = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Общее количество выпускников группы для процентных отчетов.",
-    )
-    admission_count = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Количество поступивших, если нужно считать процент выпуска.",
-    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -63,7 +53,7 @@ class AlumniProfile(models.Model):
         SELF_EMPLOYED = "SELF_EMPLOYED", "Самозанятый / предприниматель"
         CONTINUING_EDUCATION = "CONTINUING_EDUCATION", "Продолжает обучение"
         UNEMPLOYED = "UNEMPLOYED", "Не работает"
-        LOST_CONTACT = "LOST_CONTACT", "Потеряна связь"
+        LOST_CONTACT = "LOST_CONTACT", "Неизвестно"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

@@ -21,8 +21,6 @@ interface AcademicGroup {
   study_form_display?: string;
   degree_level: string;
   degree_level_display?: string;
-  total_graduates: number | null;
-  admission_count: number | null;
   is_active: boolean;
 }
 
@@ -34,8 +32,6 @@ type GroupFormData = {
   profile: string;
   study_form: string;
   degree_level: string;
-  total_graduates: string;
-  admission_count: string;
   is_active: boolean;
 };
 
@@ -47,8 +43,6 @@ const emptyForm: GroupFormData = {
   profile: '',
   study_form: 'FULL_TIME',
   degree_level: 'BACHELOR',
-  total_graduates: '',
-  admission_count: '',
   is_active: true,
 };
 
@@ -60,8 +54,6 @@ const toFormData = (group: AcademicGroup): GroupFormData => ({
   profile: group.profile || '',
   study_form: group.study_form || 'FULL_TIME',
   degree_level: group.degree_level || 'BACHELOR',
-  total_graduates: group.total_graduates ? String(group.total_graduates) : '',
-  admission_count: group.admission_count ? String(group.admission_count) : '',
   is_active: group.is_active,
 });
 
@@ -73,8 +65,6 @@ const toPayload = (form: GroupFormData) => ({
   profile: form.profile.trim(),
   study_form: form.study_form,
   degree_level: form.degree_level,
-  total_graduates: form.total_graduates ? Number(form.total_graduates) : null,
-  admission_count: form.admission_count ? Number(form.admission_count) : null,
   is_active: form.is_active,
 });
 
@@ -190,8 +180,6 @@ const AdminGroupsPage: React.FC = () => {
                 <option value="BACHELOR">{t('graduate.bachelor')}</option>
                 <option value="MASTER">{t('graduate.master')}</option>
               </SelectField>
-              <InputField label={t('admin.totalGraduates')} type="number" value={formData.total_graduates} onChange={(event) => updateField('total_graduates', event.target.value)} />
-              <InputField label={t('admin.admissionCount')} type="number" value={formData.admission_count} onChange={(event) => updateField('admission_count', event.target.value)} />
               <SwitchField label={t('admin.groupActive')} checked={formData.is_active} onChange={(checked) => updateField('is_active', checked)} className="md:col-span-2" />
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row md:col-span-2">

@@ -12,8 +12,6 @@ class AcademicGroupAdmin(admin.ModelAdmin):
         "profile",
         "study_form",
         "degree_level",
-        "total_graduates",
-        "admission_count",
         "is_active",
     )
     list_filter = ("graduation_year", "study_form", "degree_level", "is_active")

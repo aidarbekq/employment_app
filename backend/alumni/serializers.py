@@ -26,8 +26,6 @@ class AcademicGroupSerializer(serializers.ModelSerializer):
             "study_form_display",
             "degree_level",
             "degree_level_display",
-            "total_graduates",
-            "admission_count",
             "is_active",
         ]
 
@@ -143,6 +141,7 @@ class AdminAlumniCreateSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password2 = serializers.CharField(write_only=True, required=False, allow_blank=True)
     academic_group_id = serializers.PrimaryKeyRelatedField(
         queryset=AcademicGroup.objects.all(),
         source="academic_group",
@@ -184,6 +183,14 @@ class AdminAlumniCreateSerializer(serializers.Serializer):
             validate_password(value)
         return value
 
+    def validate(self, attrs):
+        password = attrs.get("password") or ""
+        password2 = attrs.get("password2") or ""
+        if password or password2:
+            if password != password2:
+                raise serializers.ValidationError({"password2": "Password fields didn’t match."})
+        return attrs
+
     def create(self, validated_data):
         profile_fields = {
             key: validated_data.pop(key)
@@ -208,6 +215,7 @@ class AdminAlumniCreateSerializer(serializers.Serializer):
             }
         }
         password = validated_data.pop("password", "") or "DemoPass123!"
+        validated_data.pop("password2", None)
         user = User.objects.create_user(role=User.Roles.ALUMNI, password=password, **validated_data)
         profile, _ = AlumniProfile.objects.get_or_create(user=user)
         for field, value in profile_fields.items():
