@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import EmploymentReportPdfView, EmploymentStatsView
+from .views import EmploymentReportExportView, EmploymentStatsView
 
 urlpatterns = [
     path("employment-stats/", EmploymentStatsView.as_view(), name="employment-stats"),
-    path("employment-report.pdf", EmploymentReportPdfView.as_view(), name="employment-report-pdf"),
+    path("employment-report.<str:export_format>", EmploymentReportExportView.as_view(), name="employment-report-export"),
 ]

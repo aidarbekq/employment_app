@@ -18,7 +18,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import permissions
+from rest_framework import permissions, status
 
 from alumni.models import AcademicGroup, AlumniProfile
 from employers.models import Employer
@@ -143,11 +143,32 @@ class EmploymentStatsView(APIView):
         return Response(result)
 
 
-class EmploymentReportPdfView(APIView):
+class EmploymentReportExportView(APIView):
     permission_classes = (IsAdminUserRole,)
 
-    def get(self, request):
+    def get(self, request, export_format: str = "pdf"):
+        export_format = export_format.lower().strip()
+        if export_format == "doc":
+            export_format = "docx"
+        if export_format == "excel":
+            export_format = "xlsx"
+
         profiles = self._filtered_profiles(request)
+        filter_description = self._filter_description(request)
+
+        if export_format == "pdf":
+            return self._pdf_response(profiles, filter_description)
+        if export_format == "docx":
+            return self._docx_response(profiles, filter_description)
+        if export_format == "xlsx":
+            return self._xlsx_response(profiles, filter_description)
+
+        return Response(
+            {"detail": "Unsupported export format. Use pdf, docx or xlsx."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    def _pdf_response(self, profiles: list[AlumniProfile], filter_description: str) -> HttpResponse:
         buffer = BytesIO()
         font_name = self._register_font()
         styles = self._styles(font_name)
@@ -163,7 +184,7 @@ class EmploymentReportPdfView(APIView):
         )
         story = []
         story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
-        story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
+        story.append(Paragraph(filter_description, styles["ReportSubTitle"]))
         story.append(Spacer(1, 6 * mm))
         story.append(Paragraph("Структура отчета", styles["ReportSection"]))
         story.append(Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["Normal"]))
@@ -171,14 +192,14 @@ class EmploymentReportPdfView(APIView):
         story.append(PageBreak())
 
         story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
-        story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
+        story.append(Paragraph(filter_description, styles["ReportSubTitle"]))
         story.append(Spacer(1, 4 * mm))
         story.append(Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["ReportSection"]))
         story.append(self._graduates_table(profiles, styles))
         story.append(PageBreak())
 
         story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
-        story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
+        story.append(Paragraph(filter_description, styles["ReportSubTitle"]))
         story.append(Spacer(1, 4 * mm))
         story.append(Paragraph("Раздел 2. Сводные показатели трудоустройства", styles["ReportSection"]))
         story.append(self._summary_table(profiles, styles))
@@ -367,6 +388,305 @@ class EmploymentReportPdfView(APIView):
         )
         table.setStyle(self._table_style())
         return table
+
+    def _text_value(self, value) -> str:
+        return "—" if value in (None, "") else str(value)
+
+    def _full_name(self, profile: AlumniProfile) -> str:
+        return profile.user.get_full_name() or profile.user.username
+
+    def _direction_profile_text(self, profile: AlumniProfile) -> str:
+        return "\n".join(
+            part for part in (profile.direction or profile.specialty, profile.profile) if part
+        ) or "—"
+
+    def _profile_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
+        status = profile.employment_status
+        work = self._work_text(profile)
+        not_working = "—"
+        if status == AlumniProfile.EmploymentStatus.UNEMPLOYED:
+            not_working = "Не работает"
+        elif status == AlumniProfile.EmploymentStatus.LOST_CONTACT:
+            not_working = "Потеряна связь"
+
+        return [
+            index,
+            self._full_name(profile),
+            profile.academic_group.name if profile.academic_group else "—",
+            profile.graduation_year or "—",
+            self._direction_profile_text(profile),
+            profile.get_study_form_display() if profile.study_form else "—",
+            work if status == AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY else "—",
+            work if status in (
+                AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY,
+                AlumniProfile.EmploymentStatus.SELF_EMPLOYED,
+            ) else "—",
+            not_working,
+            profile.continuing_education_place
+            if status == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or profile.continuing_education_place
+            else "—",
+            profile.useful_subjects or "—",
+            profile.self_study_topics or "—",
+        ]
+
+    def _graduate_headers(self) -> list[str]:
+        return [
+            "№",
+            "ФИО",
+            "Группа",
+            "Год",
+            "Направление / профиль",
+            "Форма",
+            "По спец. (должность, место работы)",
+            "Не по спец. / самозанятый",
+            "Не работает / связь",
+            "Продолжил обучение",
+            "Полезно в работе",
+            "Изучал самостоятельно",
+        ]
+
+    def _summary_headers(self) -> list[str]:
+        return [
+            "Направление / профиль / группа",
+            "Кол-во выпускников",
+            "Кол-во опрошенных",
+            "Работают по спец.",
+            "Работают не по спец.",
+            "Самозанятые",
+            "Продолжили учебу",
+            "Не работают",
+            "Потеряна связь",
+            "% выпуска к поступившим",
+        ]
+
+    def _summary_row_values(self, profiles: Iterable[AlumniProfile]) -> list[list[str | int]]:
+        buckets: dict[tuple[str, str, str, int | None], list[AlumniProfile]] = defaultdict(list)
+        for profile in profiles:
+            group_name = profile.academic_group.name if profile.academic_group else "Без группы"
+            direction_code = profile.academic_group.direction_code if profile.academic_group else "—"
+            profile_name = profile.profile or (profile.academic_group.profile if profile.academic_group else "—")
+            buckets[(direction_code, profile_name, group_name, profile.graduation_year)].append(profile)
+
+        rows: list[list[str | int]] = []
+        for (direction_code, profile_name, group_name, year), items in sorted(
+            buckets.items(),
+            key=lambda item: (item[0][0], item[0][1], item[0][2], item[0][3] or 0),
+        ):
+            group = items[0].academic_group
+            total_graduates = group.total_graduates if group and group.total_graduates else len(items)
+            admission_count = group.admission_count if group else None
+            surveyed = sum(1 for item in items if item.is_surveyed)
+            denominator = surveyed or len(items)
+            counts = defaultdict(int)
+            continuing_count = 0
+            for item in items:
+                counts[item.employment_status] += 1
+                if item.employment_status == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or item.continuing_education_place:
+                    continuing_count += 1
+            graduation_percent = f"{_percent(total_graduates, admission_count)}%" if admission_count else "—"
+            group_label = f"{direction_code}\n{profile_name}\n{group_name}, {year or 'без года'}"
+            rows.append([
+                group_label,
+                total_graduates,
+                surveyed,
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY], denominator),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY], denominator),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.SELF_EMPLOYED], denominator),
+                _count_with_percent(continuing_count, denominator),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.UNEMPLOYED], denominator),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.LOST_CONTACT], len(items)),
+                graduation_percent,
+            ])
+        return rows
+
+    def _docx_response(self, profiles: list[AlumniProfile], filter_description: str) -> HttpResponse:
+        try:
+            from docx import Document
+            from docx.enum.section import WD_ORIENT
+            from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.oxml import OxmlElement
+            from docx.oxml.ns import qn
+            from docx.shared import Cm, Pt
+        except ImportError as exc:
+            return Response(
+                {"detail": f"DOCX export dependency is not installed: {exc}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        def set_landscape(section):
+            section.orientation = WD_ORIENT.LANDSCAPE
+            section.page_width, section.page_height = section.page_height, section.page_width
+            section.left_margin = Cm(0.7)
+            section.right_margin = Cm(0.7)
+            section.top_margin = Cm(0.8)
+            section.bottom_margin = Cm(0.8)
+
+        def set_cell_text(cell, value, bold: bool = False, align_center: bool = False):
+            cell.text = ""
+            paragraph = cell.paragraphs[0]
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if align_center else WD_ALIGN_PARAGRAPH.LEFT
+            run = paragraph.add_run(self._text_value(value))
+            run.bold = bold
+            run.font.name = "Times New Roman"
+            run.font.size = Pt(7.5 if not bold else 8)
+            run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
+            tc_pr = cell._tc.get_or_add_tcPr()
+            tc_mar = tc_pr.first_child_found_in("w:tcMar")
+            if tc_mar is None:
+                tc_mar = OxmlElement("w:tcMar")
+                tc_pr.append(tc_mar)
+            for margin_name in ("top", "left", "bottom", "right"):
+                margin = tc_mar.find(qn(f"w:{margin_name}"))
+                if margin is None:
+                    margin = OxmlElement(f"w:{margin_name}")
+                    tc_mar.append(margin)
+                margin.set(qn("w:w"), "60")
+                margin.set(qn("w:type"), "dxa")
+
+        document = Document()
+        set_landscape(document.sections[0])
+        normal_style = document.styles["Normal"]
+        normal_style.font.name = "Times New Roman"
+        normal_style.font.size = Pt(9)
+        normal_style.element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+
+        title = document.add_paragraph()
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title.add_run(REPORT_TITLE)
+        title_run.bold = True
+        title_run.font.name = "Times New Roman"
+        title_run.font.size = Pt(12)
+        title_run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+
+        subtitle = document.add_paragraph(filter_description)
+        subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        document.add_paragraph("Структура отчета")
+        document.add_paragraph("Раздел 1. Реестр выпускников и сведения о занятости")
+        document.add_paragraph("Раздел 2. Сводные показатели трудоустройства")
+        document.add_page_break()
+
+        document.add_paragraph("Раздел 1. Реестр выпускников и сведения о занятости").runs[0].bold = True
+        graduate_headers = self._graduate_headers()
+        graduate_rows = [self._profile_row_values(profile, index) for index, profile in enumerate(profiles, start=1)]
+        graduate_table = document.add_table(rows=1, cols=len(graduate_headers))
+        graduate_table.style = "Table Grid"
+        graduate_table.autofit = True
+        for cell, header in zip(graduate_table.rows[0].cells, graduate_headers):
+            set_cell_text(cell, header, bold=True, align_center=True)
+        for row in graduate_rows:
+            cells = graduate_table.add_row().cells
+            for cell, value in zip(cells, row):
+                set_cell_text(cell, value, align_center=False)
+
+        document.add_page_break()
+        document.add_paragraph("Раздел 2. Сводные показатели трудоустройства").runs[0].bold = True
+        summary_headers = self._summary_headers()
+        summary_rows = self._summary_row_values(profiles)
+        summary_table = document.add_table(rows=1, cols=len(summary_headers))
+        summary_table.style = "Table Grid"
+        summary_table.autofit = True
+        for cell, header in zip(summary_table.rows[0].cells, summary_headers):
+            set_cell_text(cell, header, bold=True, align_center=True)
+        for row in summary_rows:
+            cells = summary_table.add_row().cells
+            for cell, value in zip(cells, row):
+                set_cell_text(cell, value, align_center=False)
+
+        document.add_paragraph("")
+        document.add_paragraph("Зав. кафедрой «ИСТ им. акад. А. Жайнакова» ____________________")
+
+        buffer = BytesIO()
+        document.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response["Content-Disposition"] = 'attachment; filename="employment_report.docx"'
+        return response
+
+    def _xlsx_response(self, profiles: list[AlumniProfile], filter_description: str) -> HttpResponse:
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+            from openpyxl.utils import get_column_letter
+        except ImportError as exc:
+            return Response(
+                {"detail": f"XLSX export dependency is not installed: {exc}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        workbook = Workbook()
+        border_side = Side(style="thin", color="111827")
+        border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
+        header_font = Font(name="Arial", size=10, bold=True, color="111827")
+        title_font = Font(name="Arial", size=12, bold=True, color="111827")
+        body_font = Font(name="Arial", size=10, color="111827")
+        header_fill = PatternFill(fill_type="solid", fgColor="F8FAFC")
+
+        def prepare_sheet(sheet, title: str, headers: list[str], rows: list[list[str | int | None]], widths: list[int]):
+            sheet.title = title
+            sheet.append([REPORT_TITLE])
+            sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+            sheet.cell(1, 1).font = title_font
+            sheet.cell(1, 1).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            sheet.append([filter_description])
+            sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
+            sheet.cell(2, 1).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            sheet.append([])
+            sheet.append(headers)
+            for cell in sheet[4]:
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+                cell.border = border
+            for row in rows:
+                sheet.append([self._text_value(value) for value in row])
+            for row in sheet.iter_rows(min_row=5, max_row=sheet.max_row, min_col=1, max_col=len(headers)):
+                for cell in row:
+                    cell.font = body_font
+                    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+                    cell.border = border
+            sheet.freeze_panes = "A5"
+            sheet.auto_filter.ref = f"A4:{get_column_letter(len(headers))}{sheet.max_row}"
+            for index, width in enumerate(widths, start=1):
+                sheet.column_dimensions[get_column_letter(index)].width = width
+            sheet.row_dimensions[1].height = 34
+            sheet.row_dimensions[2].height = 28
+
+        graduate_headers = self._graduate_headers()
+        graduate_rows = [self._profile_row_values(profile, index) for index, profile in enumerate(profiles, start=1)]
+        prepare_sheet(
+            workbook.active,
+            "Выпускники",
+            graduate_headers,
+            graduate_rows,
+            [7, 28, 16, 10, 32, 14, 34, 32, 22, 28, 38, 34],
+        )
+
+        summary_headers = self._summary_headers()
+        summary_rows = self._summary_row_values(profiles)
+        summary_sheet = workbook.create_sheet("Сводка")
+        prepare_sheet(
+            summary_sheet,
+            "Сводка",
+            summary_headers,
+            summary_rows,
+            [42, 18, 18, 20, 22, 18, 20, 18, 18, 22],
+        )
+
+        buffer = BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="employment_report.xlsx"'
+        return response
 
     def _table_style(self) -> TableStyle:
         return TableStyle([
