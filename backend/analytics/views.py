@@ -164,10 +164,19 @@ class EmploymentReportPdfView(APIView):
         story = []
         story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
         story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
+        story.append(Spacer(1, 6 * mm))
+        story.append(Paragraph("Структура отчета", styles["ReportSection"]))
+        story.append(Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["Normal"]))
+        story.append(Paragraph("Раздел 2. Сводные показатели трудоустройства", styles["Normal"]))
+        story.append(PageBreak())
+
+        story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
+        story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
         story.append(Spacer(1, 4 * mm))
         story.append(Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["ReportSection"]))
         story.append(self._graduates_table(profiles, styles))
         story.append(PageBreak())
+
         story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
         story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
         story.append(Spacer(1, 4 * mm))
