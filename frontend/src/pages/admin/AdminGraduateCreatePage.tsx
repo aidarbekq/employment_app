@@ -33,6 +33,7 @@ interface GraduateCreateForm {
   first_name: string;
   last_name: string;
   password: string;
+  password2: string;
   academic_group_id: string;
   graduation_year: string;
   specialty: string;
@@ -54,7 +55,8 @@ const initialForm: GraduateCreateForm = {
   email: '',
   first_name: '',
   last_name: '',
-  password: 'DemoPass123!',
+  password: '',
+  password2: '',
   academic_group_id: '',
   graduation_year: '',
   specialty: '',
@@ -112,6 +114,11 @@ const AdminGraduateCreatePage: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (form.password !== form.password2) {
+      toast.error(t('auth.passwordMismatch'));
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -162,7 +169,8 @@ const AdminGraduateCreatePage: React.FC = () => {
                 <InputField label={t('auth.lastName')} required value={form.last_name} onChange={(event) => updateForm('last_name', event.target.value)} />
                 <InputField label={t('auth.username')} required value={form.username} onChange={(event) => updateForm('username', event.target.value)} />
                 <InputField label={t('auth.email')} required type="email" value={form.email} onChange={(event) => updateForm('email', event.target.value)} />
-                <InputField label={t('auth.password')} required value={form.password} onChange={(event) => updateForm('password', event.target.value)} className="md:col-span-2" />
+                <InputField label={t('auth.password')} required type="password" value={form.password} onChange={(event) => updateForm('password', event.target.value)} />
+                <InputField label={t('auth.confirmPassword')} required type="password" value={form.password2} onChange={(event) => updateForm('password2', event.target.value)} />
               </CardContent>
             </Card>
 
