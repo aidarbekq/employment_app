@@ -20,6 +20,7 @@ import api from '@/services/api';
 
 interface EmploymentStatsEntry {
   total: number;
+  surveyed?: number;
   employed: number;
 }
 
@@ -67,16 +68,18 @@ const HomePage: React.FC = () => {
         const data = res.data as EmploymentStatsResponse;
 
         let total = 0;
+        let surveyed = 0;
         let employed = 0;
 
         Object.entries(data).forEach(([key, value]) => {
           if (key !== 'meta' && value && 'total' in value && 'employed' in value) {
             total += value.total;
+            surveyed += value.surveyed ?? value.total;
             employed += value.employed;
           }
         });
 
-        setEmploymentRate(total > 0 ? Math.round((employed / total) * 100) : 0);
+        setEmploymentRate(surveyed > 0 ? Math.round((employed / surveyed) * 100) : 0);
         setTotalGraduates(total);
         setTotalEmployers(data.meta?.total_employers ?? null);
       } catch (error) {

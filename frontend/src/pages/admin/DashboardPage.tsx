@@ -6,11 +6,12 @@ import ExportMenu, { ExportFormat } from "@/components/common/ExportMenu";
 import { FilterX, RefreshCw, TrendingUp, Users, UserCheck, Briefcase } from "lucide-react";
 import api from "@/services/api";
 import {
-  Area,
-  AreaChart,
+  Bar,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Legend,
+  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -29,12 +30,15 @@ interface StatYear {
   self_employed: number;
   continuing_education: number;
   lost_contact: number;
+  unknown?: number;
   percent_employed: number;
   percent_employed_specialty: number;
   percent_employed_not_specialty: number;
   percent_self_employed: number;
   percent_continuing_education: number;
   percent_unemployed: number;
+  percent_lost_contact?: number;
+  percent_unknown?: number;
 }
 
 interface StatsMeta {
@@ -90,6 +94,12 @@ const downloadBlob = (blob: Blob, fileName: string) => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+};
+
+const getFileNameFromDisposition = (disposition: string | undefined, fallback: string) => {
+  if (!disposition) return fallback;
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match?.[1] || fallback;
 };
 
 const buildCleanParams = (filters: ReportFilters) =>
@@ -174,7 +184,12 @@ const AdminDashboardPage: React.FC = () => {
   const chartData = yearEntries.map(([year, value]) => ({
     year,
     rate: value.percent_employed,
-    employed: value.employed,
+    employedSpecialty: value.employed_specialty,
+    employedNotSpecialty: value.employed_not_specialty,
+    selfEmployed: value.self_employed,
+    unemployed: value.unemployed,
+    unknown: value.lost_contact,
+    total: value.total,
     surveyed: value.surveyed,
   }));
 
@@ -203,8 +218,8 @@ const AdminDashboardPage: React.FC = () => {
         params,
         responseType: "blob",
       });
-      const suffix = filters.graduation_year || filters.academic_group || filters.direction_code || "all";
-      downloadBlob(res.data as Blob, `employment_report_${suffix}.${format}`);
+      const fallback = `employment_report.${format}`;
+      downloadBlob(res.data as Blob, getFileNameFromDisposition(res.headers["content-disposition"], fallback));
     } catch (error) {
       console.error("Error exporting report", error);
     } finally {
@@ -261,6 +276,7 @@ const AdminDashboardPage: React.FC = () => {
     { title: t("graduate.selfEmployed"), countKey: "self_employed", percentKey: "percent_self_employed", color: "bg-accent-500" },
     { title: t("graduate.continuingEducation"), countKey: "continuing_education", percentKey: "percent_continuing_education", color: "bg-warning-500" },
     { title: t("admin.unemployed"), countKey: "unemployed", percentKey: "percent_unemployed", color: "bg-error-500" },
+    { title: t("graduate.lostContact"), countKey: "lost_contact", percentKey: "percent_unknown", color: "bg-gray-400" },
   ] as const;
 
   if (loading) {
@@ -387,7 +403,7 @@ const AdminDashboardPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap font-medium">{value.surveyed}</td>
                     {statusColumns.map((column) => (
                       <td key={column.title} className="px-6 py-4">
-                        {statusCell(Number(value[column.countKey]), Number(value[column.percentKey]), column.color)}
+                        {statusCell(Number(value[column.countKey] ?? 0), Number(value[column.percentKey] ?? 0), column.color)}
                       </td>
                     ))}
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -452,31 +468,42 @@ const AdminDashboardPage: React.FC = () => {
           <div className="h-[440px]">
             {chartData.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 24, right: 28, left: 0, bottom: 8 }}>
-                  <defs>
-                    <linearGradient id="employmentRateGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.28} />
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
+                <ComposedChart data={chartData} margin={{ top: 24, right: 20, left: 0, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="year" tickLine={false} axisLine={false} tickMargin={12} />
-                  <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} width={44} />
+                  <YAxis yAxisId="left" allowDecimals={false} tickLine={false} axisLine={false} width={44} />
+                  <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} width={50} />
                   <Tooltip
-                    formatter={(value: number | string, name: string) => [name === "rate" ? `${value}%` : value, name === "rate" ? t("admin.employmentRate") : t("admin.employed")]}
+                    formatter={(value: number | string, name: string) => {
+                      const labels: Record<string, string> = {
+                        employedSpecialty: t("graduate.employedSpecialty"),
+                        employedNotSpecialty: t("graduate.employedNotSpecialty"),
+                        selfEmployed: t("graduate.selfEmployed"),
+                        unemployed: t("graduate.unemployed"),
+                        unknown: t("graduate.lostContact"),
+                        rate: t("admin.employmentRate"),
+                      };
+                      return [name === "rate" ? `${value}%` : value, labels[name] || name];
+                    }}
                     labelFormatter={(label) => `${t("admin.year")}: ${label}`}
                   />
-                  <Area
+                  <Legend verticalAlign="bottom" height={36} />
+                  <Bar yAxisId="left" dataKey="employedSpecialty" stackId="employment" name={t("graduate.employedSpecialty")} fill="#2563EB" radius={[0, 0, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="employedNotSpecialty" stackId="employment" name={t("graduate.employedNotSpecialty")} fill="#60A5FA" radius={[0, 0, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="selfEmployed" stackId="employment" name={t("graduate.selfEmployed")} fill="#14B8A6" radius={[0, 0, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="unemployed" stackId="employment" name={t("graduate.unemployed")} fill="#F59E0B" radius={[0, 0, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="unknown" stackId="employment" name={t("graduate.lostContact")} fill="#9CA3AF" radius={[6, 6, 0, 0]} />
+                  <Line
+                    yAxisId="right"
                     type="monotone"
                     dataKey="rate"
                     name={t("admin.employmentRate")}
-                    stroke="#2563EB"
+                    stroke="#111827"
                     strokeWidth={3}
-                    fill="url(#employmentRateGradient)"
                     dot={{ r: 4, strokeWidth: 2 }}
                     activeDot={{ r: 7, strokeWidth: 2 }}
                   />
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500">{t("common.noResults")}</div>

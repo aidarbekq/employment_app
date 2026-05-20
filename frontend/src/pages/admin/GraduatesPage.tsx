@@ -62,6 +62,12 @@ const downloadBlob = (blob: Blob, fileName: string) => {
   URL.revokeObjectURL(url);
 };
 
+const getFileNameFromDisposition = (disposition: string | undefined, fallback: string) => {
+  if (!disposition) return fallback;
+  const match = disposition.match(/filename="?([^";]+)"?/i);
+  return match?.[1] || fallback;
+};
+
 const AdminGraduatesPage: React.FC = () => {
   const { t } = useTranslation();
   const [graduates, setGraduates] = useState<Graduate[]>([]);
@@ -118,8 +124,7 @@ const AdminGraduatesPage: React.FC = () => {
         params: buildParams(),
         responseType: 'blob',
       });
-      const suffix = yearFilter || groupFilter || statusFilter || 'all';
-      downloadBlob(res.data as Blob, `employment_report_${suffix}.${format}`);
+      downloadBlob(res.data as Blob, getFileNameFromDisposition(res.headers['content-disposition'], `employment_report.${format}`));
     } catch (error) {
       console.error('Error exporting report', error);
     } finally {
