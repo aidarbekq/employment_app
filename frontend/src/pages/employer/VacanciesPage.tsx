@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from "react";
-import {
-  Briefcase, MapPin, Calendar, Pencil, Trash2, Plus, Search,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import api from "@/services/api";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/common/Card";
-import Button from "@/components/common/Button";
+import React, { useEffect, useMemo, useState } from 'react';
+import { Briefcase, Calendar, Pencil, Plus, Search, Trash2, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import api from '@/services/api';
+import Button from '@/components/common/Button';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import EmptyState from '@/components/common/EmptyState';
+import PageHeader from '@/components/common/PageHeader';
+import { Card, CardContent } from '@/components/common/Card';
+import { fieldClass } from '@/components/common/FormControls';
 
 interface Vacancy {
   id: number;
@@ -24,157 +27,170 @@ const VacanciesPage: React.FC = () => {
   const { t } = useTranslation();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchVacancies = async () => {
       try {
-        const res = await api.get("vacancies/vacancies/");
+        const res = await api.get('vacancies/vacancies/');
         setVacancies(res.data);
       } catch (err) {
-        console.error("Ошибка загрузки вакансий", err);
+        console.error('Error loading vacancies', err);
+        toast.error(t('vacancy.errorLoad'));
       } finally {
         setLoading(false);
       }
     };
     fetchVacancies();
-  }, []);
+  }, [t]);
 
-  const filtered = vacancies.filter((v) =>
-    [v.title, v.location, v.employer].some((field) =>
-      field?.toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const filtered = useMemo(() => {
+    const query = search.toLowerCase();
+    return vacancies.filter((vacancy) =>
+      [vacancy.title, vacancy.location, vacancy.employer, vacancy.description].some((field) =>
+        field?.toLowerCase().includes(query)
+      )
+    );
+  }, [search, vacancies]);
 
   const confirmDelete = async () => {
     if (deleteId === null) return;
+    setDeleting(true);
     try {
       await api.delete(`vacancies/vacancies/${deleteId}/`);
-      setVacancies((prev) => prev.filter((v) => v.id !== deleteId));
+      setVacancies((prev) => prev.filter((vacancy) => vacancy.id !== deleteId));
+      toast.success(t('vacancy.successDelete'));
     } catch (err) {
-      console.error("Ошибка удаления", err);
+      console.error('Error deleting vacancy', err);
+      toast.error(t('vacancy.errorDelete'));
     } finally {
+      setDeleting(false);
       setDeleteId(null);
     }
   };
 
-  if (loading) {
-    return <p className="text-center mt-8 text-gray-500">{t("common.loading")}</p>;
-  }
+  const selectedVacancy = vacancies.find((vacancy) => vacancy.id === deleteId);
+
+  if (loading) return <p className="mt-10 text-center text-gray-500">{t('common.loading')}</p>;
 
   return (
-    <div className="space-y-6 px-4 sm:px-0">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-semibold text-gray-800"></h1>
-        <Button onClick={() => navigate("/employer/vacancies/create")}
-          className="flex items-center">
-          <Plus className="h-4 w-4 mr-1" /> {t("vacancy.addVacancy")}
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('employer.vacancies')}
+        subtitle={t('admin.vacanciesListHint')}
+        icon={<Briefcase className="h-6 w-6" />}
+        actions={
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/employer/vacancies/create')}>
+            {t('vacancy.addVacancy')}
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("employer.vacancies")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex mb-6">
-            <div className="relative w-full md:w-96">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <Card className="overflow-hidden">
+        <CardContent className="p-5 sm:p-6">
+          <div className="mb-6 max-w-xl">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder={t("common.search") + "..."}
+                placeholder={t('common.search')}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                onChange={(event) => setSearch(event.target.value)}
+                className={`${fieldClass} pl-10`}
               />
             </div>
           </div>
 
-          <div className="space-y-4">
-            {filtered.map((v) => (
-              <div key={v.id} className="border border-gray-200 rounded-lg bg-white px-4 py-4 shadow-sm">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                  <div className="flex items-center space-x-3 mb-3 sm:mb-0">
-                    <div className="p-2 bg-gray-100 rounded-full">
-                      <Briefcase className="h-6 w-6 text-gray-700" />
+          {filtered.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {filtered.map((vacancy) => (
+                <article
+                  key={vacancy.id}
+                  className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 ring-1 ring-primary-100">
+                        <Briefcase className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-lg font-bold text-gray-900">{vacancy.title || t('common.notSpecified')}</h3>
+                        <p className="mt-1 truncate text-sm text-gray-500">{vacancy.employer}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">{v.title}</h3>
-                      <p className="text-sm text-gray-500">{v.employer}</p>
+                    <span
+                      className={
+                        vacancy.is_active
+                          ? 'rounded-full bg-success-50 px-3 py-1 text-xs font-semibold text-success-700 ring-1 ring-success-100'
+                          : 'rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200'
+                      }
+                    >
+                      {vacancy.is_active ? t('vacancy.active') : t('vacancy.inactive')}
+                    </span>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2">
+                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <span className="truncate">{vacancy.location || t('common.notSpecified')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span>{new Date(vacancy.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                      onClick={() => navigate(`/employer/vacancies/${v.id}/edit`)}
-                    >
-                      <Pencil className="h-4 w-4" /> {t("common.edit")}
-                    </button>
-                    <button
-                      className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1"
-                      onClick={() => setDeleteId(v.id)}
-                    >
-                      <Trash2 className="h-4 w-4" /> {t("common.delete")}
-                    </button>
-                  </div>
-                </div>
 
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                  <div>
-                    <h4 className="text-gray-900 font-medium mb-1">{t("vacancy.location")}</h4>
-                    <p className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1 text-gray-500" />
-                      {v.location}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-gray-900 font-medium mb-1">{t("vacancy.salary")}</h4>
-                    <p>${v.salary || t("common.noResults")}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-gray-900 font-medium mb-1">{t("vacancy.createdAt")}</h4>
-                    <p className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1 text-gray-500" />
-                      {new Date(v.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-gray-900 font-medium mb-1">{t("vacancy.description")}</h4>
-                    <p className="line-clamp-3">{v.description}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+                  {vacancy.description && <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-500">{vacancy.description}</p>}
 
-            {!filtered.length && (
-              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">{t("common.noResults")}</h3>
-                <p className="text-gray-500">{t("common.search")}</p>
-              </div>
-            )}
-          </div>
+                  <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      leftIcon={<Pencil className="h-4 w-4" />}
+                      onClick={() => navigate(`/employer/vacancies/${vacancy.id}/edit`)}
+                    >
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                      onClick={() => setDeleteId(vacancy.id)}
+                    >
+                      {t('common.delete')}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Briefcase className="h-7 w-7" />}
+              title={t('vacancy.noResults')}
+              description={t('common.tryAdjustingFilters')}
+              actions={
+                <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/employer/vacancies/create')}>
+                  {t('vacancy.addVacancy')}
+                </Button>
+              }
+            />
+          )}
         </CardContent>
       </Card>
 
-      {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">{t("common.delete")}</h3>
-            <p className="mb-6 text-gray-600">{t("vacancy.confirmDelete")}</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteId(null)} className="px-4 py-2 border rounded hover:bg-gray-100">
-                {t("common.cancel")}
-              </button>
-              <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-                {t("common.delete")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={deleteId !== null}
+        title={t('common.confirmDelete')}
+        description={selectedVacancy ? t('vacancy.confirmDelete', { title: selectedVacancy.title }) : t('common.deleteDescription')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        loading={deleting}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };

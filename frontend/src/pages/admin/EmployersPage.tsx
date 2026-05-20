@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { Search, Eye } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import api from "@/services/api";
-import Button from "@/components/common/Button";
+import React, { useEffect, useMemo, useState } from 'react';
+import { Building2, Eye, MapPin, Phone, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import api from '@/services/api';
+import Button from '@/components/common/Button';
+import EmptyState from '@/components/common/EmptyState';
+import PageHeader from '@/components/common/PageHeader';
+import { Card, CardContent } from '@/components/common/Card';
+import { fieldClass } from '@/components/common/FormControls';
 
 interface Employer {
   id: number;
@@ -24,16 +28,16 @@ const EmployersPage: React.FC = () => {
   const { t } = useTranslation();
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEmployers = async () => {
       try {
-        const res = await api.get("employers/employers/");
+        const res = await api.get('employers/employers/');
         setEmployers(res.data);
       } catch (error) {
-        console.error("Error loading employers", error);
+        console.error('Error loading employers', error);
       } finally {
         setLoading(false);
       }
@@ -42,120 +46,98 @@ const EmployersPage: React.FC = () => {
     fetchEmployers();
   }, []);
 
-  const filtered = employers.filter((e) => {
+  const filtered = useMemo(() => {
     const lower = search.toLowerCase();
-    return (
-      e.company_name?.toLowerCase().includes(lower) ||
-      e.address?.toLowerCase().includes(lower) ||
-      e.phone?.toLowerCase().includes(lower) ||
-      (e.description?.toLowerCase() || "").includes(lower)
+    return employers.filter((employer) =>
+      [employer.company_name, employer.address, employer.phone, employer.description, employer.user?.email]
+        .some((field) => field?.toLowerCase().includes(lower))
     );
-  });
+  }, [employers, search]);
 
-  if (loading)
-    return <p className="text-center mt-10 text-gray-500">{t("admin.loadingEmployers")}</p>;
+  if (loading) return <p className="mt-10 text-center text-gray-500">{t('admin.loadingEmployers')}</p>;
 
-return (
-  <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-    <h1 className="text-2xl sm:text-3xl font-bold text-blue-800">
-      {t("admin.employersListTitle")}
-    </h1>
-
-    <div className="relative w-full sm:max-w-md">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-      <input
-        type="text"
-        placeholder={t("common.search")}
-        className="w-full border pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={t('admin.employersListTitle')}
+        subtitle={t('admin.employersListHint')}
+        icon={<Building2 className="h-6 w-6" />}
       />
-    </div>
 
-    {/* Desktop Table */}
-    <div className="hidden sm:block">
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full text-sm text-left bg-white">
-          <thead className="bg-gray-50 text-gray-700">
-            <tr>
-              <th className="px-4 py-3">{t("employer.company_name")}</th>
-              <th className="px-4 py-3">{t("employer.address")}</th>
-              <th className="px-4 py-3">{t("employer.phone")}</th>
-              <th className="px-4 py-3">{t("employer.description")}</th>
-              <th className="px-4 py-3">{t("common.view")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length > 0 ? (
-              filtered.map((e) => (
-                <tr key={e.id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-2">{e.company_name}</td>
-                  <td className="px-4 py-2">{e.address}</td>
-                  <td className="px-4 py-2">{e.phone}</td>
-                  <td className="px-4 py-2">{e.description || "—"}</td>
-                  <td className="px-4 py-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      leftIcon={<Eye className="h-4 w-4" />}
-                      onClick={() => navigate(`/admin/employers/${e.id}`)}
-                    >
-                      {t("common.view")}
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="text-center py-6 text-gray-500">
-                  {t("common.noResults")}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    {/* Mobile Cards */}
-    <div className="sm:hidden space-y-4">
-      {filtered.length > 0 ? (
-        filtered.map((e) => (
-          <div
-            key={e.id}
-            className="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-2"
-          >
-            <div className="text-sm">
-              <strong>{t("employer.company_name")}:</strong> {e.company_name}
+      <Card className="overflow-hidden">
+        <CardContent className="p-5 sm:p-6">
+          <div className="mb-6 max-w-xl">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder={t('common.search')}
+                className={`${fieldClass} pl-10`}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
             </div>
-            <div className="text-sm">
-              <strong>{t("employer.address")}:</strong> {e.address}
-            </div>
-            <div className="text-sm">
-              <strong>{t("employer.phone")}:</strong> {e.phone}
-            </div>
-            <div className="text-sm">
-              <strong>{t("employer.description")}:</strong>{" "}
-              {e.description || "—"}
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              leftIcon={<Eye className="h-4 w-4" />}
-              onClick={() => navigate(`/admin/employers/${e.id}`)}
-            >
-              {t("common.view")}
-            </Button>
           </div>
-        ))
-      ) : (
-        <p className="text-center py-4 text-gray-500">
-          {t("common.noResults")}
-        </p>
-      )}
+
+          {filtered.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {filtered.map((employer) => {
+                const initials = (employer.company_name || employer.user?.email || '—').slice(0, 2).toUpperCase();
+                return (
+                  <article
+                    key={employer.id}
+                    className="group rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-50 to-accent-50 text-lg font-bold text-primary-700 ring-1 ring-primary-100">
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-lg font-bold text-gray-900">{employer.company_name || t('common.notSpecified')}</h3>
+                        <p className="mt-1 truncate text-sm text-gray-500">{employer.user?.email || t('common.notSpecified')}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2">
+                      <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span className="truncate">{employer.address || t('common.notSpecified')}</span>
+                      </div>
+                      <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        <span className="truncate">{employer.phone || t('common.notSpecified')}</span>
+                      </div>
+                    </div>
+
+                    {employer.description && (
+                      <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-500">{employer.description}</p>
+                    )}
+
+                    <div className="mt-5 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        leftIcon={<Eye className="h-4 w-4" />}
+                        onClick={() => navigate(`/admin/employers/${employer.id}`)}
+                      >
+                        {t('common.view')}
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Building2 className="h-7 w-7" />}
+              title={t('common.noResults')}
+              description={t('common.tryAdjustingFilters')}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
-  </div>
-);
+  );
 };
 
 export default EmployersPage;
