@@ -9,6 +9,8 @@ import {
   User,
   Briefcase,
   Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/common/Card";
 import Button from "@/components/common/Button";
@@ -51,6 +53,8 @@ const RegisterPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isBackgroundAvailable, setIsBackgroundAvailable] = useState(
     Boolean(logoUni)
   );
@@ -224,26 +228,42 @@ const RegisterPage: React.FC = () => {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
                   placeholder={t("auth.password")}
                   required
-                  className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-10 pr-12 py-2 w-full border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                  aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
 
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   name="password2"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={formData.password2}
                   onChange={handleChange}
                   placeholder={t("auth.confirmPassword")}
                   required
-                  className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  className="pl-10 pr-12 py-2 w-full border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((value) => !value)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                  aria-label={showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
 
               <div>

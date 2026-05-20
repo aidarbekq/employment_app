@@ -48,7 +48,7 @@ const LoginPage: React.FC = () => {
   const hasBackground = Boolean(logoUni && isBackgroundAvailable);
 
   return (
-    <div className="relative h-screen flex items-center justify-center bg-gradient-to-r from-primary-700 to-primary-900 px-4 sm:px-6">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-r from-primary-700 to-primary-900 px-4 py-10 sm:px-6">
       {hasBackground && (
         <div
           className="absolute inset-0 opacity-20 z-0 bg-no-repeat bg-center bg-cover"
