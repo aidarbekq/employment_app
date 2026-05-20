@@ -203,8 +203,8 @@ const HomePage: React.FC = () => {
                 <Link to="/register" className="w-full sm:w-auto">
                   <Button
                     size="lg"
-                    variant="outline"
-                    className="w-full sm:w-auto border-white text-white hover:bg-white hover:text-primary-800"
+                    variant="white"
+                    className="w-full sm:w-auto border border-white/70"
                   >
                     {t('nav.register')}
                   </Button>
@@ -243,7 +243,7 @@ const HomePage: React.FC = () => {
 
       <section className="bg-white pb-14 md:pb-20">
         <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-6xl rounded-[2rem] border border-primary-100 bg-gradient-to-br from-primary-50 via-white to-accent-50 p-5 md:p-8 shadow-sm">
+          <div className="mx-auto max-w-7xl rounded-[2rem] border border-primary-100 bg-gradient-to-br from-primary-50 via-white to-accent-50 p-5 md:p-8 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
               {programCards.map((item) => (
                 <div key={item.code} className="rounded-3xl bg-white p-6 border border-gray-100 shadow-sm">
