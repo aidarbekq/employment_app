@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/common/Card";
 import Button from "@/components/common/Button";
-import { Download, FilterX, RefreshCw } from "lucide-react";
+import { Download, FilterX, RefreshCw, TrendingUp, Users, UserCheck, Briefcase } from "lucide-react";
 import api from "@/services/api";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
   Cell,
   Legend,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -75,7 +75,7 @@ const EMPTY_FILTERS: ReportFilters = {
   employment_status: "",
 };
 
-const STATUS_COLORS = ["#2563EB", "#60A5FA", "#22C55E", "#FACC15", "#EF4444", "#6B7280"];
+const STATUS_COLORS = ["#2563EB", "#60A5FA", "#14B8A6", "#F59E0B", "#EF4444", "#6B7280"];
 
 const isStatYear = (value: StatYear | StatsMeta | undefined): value is StatYear =>
   Boolean(value && "total" in value && "employed" in value);
@@ -211,17 +211,56 @@ const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  const statusCell = (count: number, percent: number) => (
-    <div className="min-w-[120px]">
-      <div className="flex items-center justify-between gap-2 text-xs text-gray-600 mb-1">
-        <span className="font-medium text-gray-800">{count}</span>
+  const statusCell = (count: number, percent: number, colorClass: string) => (
+    <div className="min-w-[132px]">
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-600 mb-1.5">
+        <span className="font-semibold text-gray-900">{count}</span>
         <span>{percent}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-        <div className="h-full rounded-full bg-primary-500" style={{ width: `${Math.min(percent, 100)}%` }} />
+      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div className={`h-full rounded-full ${colorClass}`} style={{ width: `${Math.min(percent, 100)}%` }} />
       </div>
     </div>
   );
+
+  const metricCards = [
+    {
+      title: t("admin.employmentRate"),
+      value: `${avgEmploymentRate}%`,
+      hint: t("admin.filteredReportHint"),
+      icon: <TrendingUp className="h-5 w-5" />,
+      tone: "text-primary-600 bg-primary-50",
+    },
+    {
+      title: t("admin.totalGraduates"),
+      value: total,
+      hint: t("admin.totalGraduatesHint"),
+      icon: <Users className="h-5 w-5" />,
+      tone: "text-secondary-600 bg-secondary-50",
+    },
+    {
+      title: t("admin.surveyed"),
+      value: surveyed,
+      hint: t("admin.surveyedHint"),
+      icon: <UserCheck className="h-5 w-5" />,
+      tone: "text-indigo-600 bg-indigo-50",
+    },
+    {
+      title: t("admin.employed"),
+      value: employed,
+      hint: t("admin.employedHint"),
+      icon: <Briefcase className="h-5 w-5" />,
+      tone: "text-green-600 bg-green-50",
+    },
+  ];
+
+  const statusColumns = [
+    { title: t("graduate.employedSpecialty"), countKey: "employed_specialty", percentKey: "percent_employed_specialty", color: "bg-primary-500" },
+    { title: t("graduate.employedNotSpecialty"), countKey: "employed_not_specialty", percentKey: "percent_employed_not_specialty", color: "bg-blue-400" },
+    { title: t("graduate.selfEmployed"), countKey: "self_employed", percentKey: "percent_self_employed", color: "bg-accent-500" },
+    { title: t("graduate.continuingEducation"), countKey: "continuing_education", percentKey: "percent_continuing_education", color: "bg-warning-500" },
+    { title: t("admin.unemployed"), countKey: "unemployed", percentKey: "percent_unemployed", color: "bg-error-500" },
+  ] as const;
 
   if (loading) {
     return <p className="text-center mt-8 text-gray-500">{t("common.loading")}</p>;
@@ -231,8 +270,8 @@ const AdminDashboardPage: React.FC = () => {
     <div className="space-y-6 px-4 sm:px-6 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800">{t("admin.dashboard")}</h1>
-          <p className="text-gray-500 text-sm">{t("admin.overview")}</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{t("admin.dashboard")}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t("admin.overview")}</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -245,8 +284,8 @@ const AdminDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle>{t("admin.reportFilters")}</CardTitle>
             <p className="text-sm text-gray-500 mt-1">{t("admin.reportFiltersHint")}</p>
@@ -259,40 +298,40 @@ const AdminDashboardPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <select className="border rounded-md px-3 py-2 text-sm" value={filters.graduation_year} onChange={(e) => handleFilterChange("graduation_year", e.target.value)}>
+            <select className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" value={filters.graduation_year} onChange={(e) => handleFilterChange("graduation_year", e.target.value)}>
               <option value="">{t("admin.allYears")}</option>
               {yearOptions.map((year) => (
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
 
-            <select className="border rounded-md px-3 py-2 text-sm" value={filters.academic_group} onChange={(e) => handleFilterChange("academic_group", e.target.value)}>
+            <select className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" value={filters.academic_group} onChange={(e) => handleFilterChange("academic_group", e.target.value)}>
               <option value="">{t("admin.allGroups")}</option>
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>{group.name}</option>
               ))}
             </select>
 
-            <select className="border rounded-md px-3 py-2 text-sm" value={filters.direction_code} onChange={(e) => handleFilterChange("direction_code", e.target.value)}>
+            <select className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" value={filters.direction_code} onChange={(e) => handleFilterChange("direction_code", e.target.value)}>
               <option value="">{t("admin.allDirections")}</option>
               {directionOptions.map(([code, label]) => (
                 <option key={code} value={code}>{label}</option>
               ))}
             </select>
 
-            <select className="border rounded-md px-3 py-2 text-sm" value={filters.study_form} onChange={(e) => handleFilterChange("study_form", e.target.value)}>
+            <select className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" value={filters.study_form} onChange={(e) => handleFilterChange("study_form", e.target.value)}>
               <option value="">{t("admin.allStudyForms")}</option>
               <option value="FULL_TIME">{t("graduate.fullTime")}</option>
               <option value="PART_TIME">{t("graduate.partTime")}</option>
             </select>
 
-            <select className="border rounded-md px-3 py-2 text-sm" value={filters.degree_level} onChange={(e) => handleFilterChange("degree_level", e.target.value)}>
+            <select className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" value={filters.degree_level} onChange={(e) => handleFilterChange("degree_level", e.target.value)}>
               <option value="">{t("admin.allDegreeLevels")}</option>
               <option value="BACHELOR">{t("graduate.bachelor")}</option>
               <option value="MASTER">{t("graduate.master")}</option>
             </select>
 
-            <select className="border rounded-md px-3 py-2 text-sm" value={filters.employment_status} onChange={(e) => handleFilterChange("employment_status", e.target.value)}>
+            <select className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" value={filters.employment_status} onChange={(e) => handleFilterChange("employment_status", e.target.value)}>
               <option value="">{t("admin.allStatuses")}</option>
               <option value="EMPLOYED_SPECIALTY">{t("graduate.employedSpecialty")}</option>
               <option value="EMPLOYED_NOT_SPECIALTY">{t("graduate.employedNotSpecialty")}</option>
@@ -306,48 +345,23 @@ const AdminDashboardPage: React.FC = () => {
       </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle>{t("admin.employmentRate")}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="text-3xl sm:text-4xl font-bold text-primary-600 mb-2">{avgEmploymentRate}%</div>
-            <p className="text-gray-500 text-sm">{t("admin.filteredReportHint")}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("admin.totalGraduates")}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="text-3xl sm:text-4xl font-bold text-secondary-600 mb-2">{total}</div>
-            <p className="text-gray-500 text-sm">{t("admin.totalGraduatesHint")}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("admin.surveyed")}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="text-3xl sm:text-4xl font-bold text-indigo-600 mb-2">{surveyed}</div>
-            <p className="text-gray-500 text-sm">{t("admin.surveyedHint")}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("admin.employed")}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-2">{employed}</div>
-            <p className="text-gray-500 text-sm">{t("admin.employedHint")}</p>
-          </CardContent>
-        </Card>
+        {metricCards.map((metric) => (
+          <Card key={metric.title} className="rounded-2xl border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">{metric.title}</p>
+                  <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{metric.value}</div>
+                  <p className="text-gray-500 text-sm leading-5">{metric.hint}</p>
+                </div>
+                <div className={`rounded-2xl p-3 ${metric.tone}`}>{metric.icon}</div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden rounded-2xl border-gray-100 shadow-sm">
         <CardHeader>
           <CardTitle>{t("admin.tableTitle")}</CardTitle>
           <p className="text-sm text-gray-500 mt-1">{t("admin.tableSubtitle")}</p>
@@ -355,30 +369,28 @@ const AdminDashboardPage: React.FC = () => {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm text-gray-700">
-              <thead className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
+              <thead className="bg-gray-50 border-y border-gray-100 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-6 py-3 text-left">{t("admin.year")}</th>
-                  <th className="px-6 py-3 text-left">{t("admin.totalGraduates")}</th>
-                  <th className="px-6 py-3 text-left">{t("admin.surveyed")}</th>
-                  <th className="px-6 py-3 text-left">{t("graduate.employedSpecialty")}</th>
-                  <th className="px-6 py-3 text-left">{t("graduate.employedNotSpecialty")}</th>
-                  <th className="px-6 py-3 text-left">{t("graduate.selfEmployed")}</th>
-                  <th className="px-6 py-3 text-left">{t("graduate.continuingEducation")}</th>
-                  <th className="px-6 py-3 text-left">{t("admin.unemployed")}</th>
-                  <th className="px-6 py-3 text-left">{t("admin.percentEmployed")}</th>
+                  <th className="sticky left-0 z-10 bg-gray-50 px-6 py-4 text-left">{t("admin.year")}</th>
+                  <th className="px-6 py-4 text-left">{t("admin.totalGraduates")}</th>
+                  <th className="px-6 py-4 text-left">{t("admin.surveyed")}</th>
+                  {statusColumns.map((column) => (
+                    <th key={column.title} className="px-6 py-4 text-left">{column.title}</th>
+                  ))}
+                  <th className="px-6 py-4 text-left">{t("admin.percentEmployed")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {yearEntries.map(([year, value]) => (
-                  <tr key={year} className="hover:bg-primary-50/40 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{year}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{value.total}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{value.surveyed}</td>
-                    <td className="px-6 py-4">{statusCell(value.employed_specialty, value.percent_employed_specialty)}</td>
-                    <td className="px-6 py-4">{statusCell(value.employed_not_specialty, value.percent_employed_not_specialty)}</td>
-                    <td className="px-6 py-4">{statusCell(value.self_employed, value.percent_self_employed)}</td>
-                    <td className="px-6 py-4">{statusCell(value.continuing_education, value.percent_continuing_education)}</td>
-                    <td className="px-6 py-4">{statusCell(value.unemployed, value.percent_unemployed)}</td>
+                  <tr key={year} className="group hover:bg-primary-50/40 transition-colors">
+                    <td className="sticky left-0 z-10 bg-white px-6 py-4 whitespace-nowrap font-semibold text-gray-900 group-hover:bg-primary-50/40">{year}</td>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">{value.total}</td>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">{value.surveyed}</td>
+                    {statusColumns.map((column) => (
+                      <td key={column.title} className="px-6 py-4">
+                        {statusCell(Number(value[column.countKey]), Number(value[column.percentKey]), column.color)}
+                      </td>
+                    ))}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex rounded-full bg-primary-50 px-3 py-1 text-primary-700 font-semibold">
                         {value.percent_employed}%
@@ -397,26 +409,33 @@ const AdminDashboardPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
         <CardHeader>
-          <CardTitle>{t("admin.employmentTrend")}</CardTitle>
-          <p className="text-sm text-gray-500 mt-1">{t("admin.employmentTrendHint")}</p>
+          <CardTitle>{t("admin.statusPieChart")}</CardTitle>
+          <p className="text-sm text-gray-500 mt-1">{t("admin.statusPieChartHint")}</p>
         </CardHeader>
         <CardContent>
-          <div className="h-96">
-            {chartData.length ? (
+          <div className="h-[440px]">
+            {pieData.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 20, right: 24, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="year" tickLine={false} axisLine={false} />
-                  <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    formatter={(value: number | string, name: string) => [name === "rate" ? `${value}%` : value, name === "rate" ? t("admin.employmentRate") : t("admin.employed")]}
-                    labelFormatter={(label) => `${t("admin.year")}: ${label}`}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="rate" name={t("admin.employmentRate")} stroke="#2563EB" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 7 }} />
-                </LineChart>
+                <PieChart margin={{ top: 12, right: 24, bottom: 12, left: 24 }}>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="58%"
+                    outerRadius="82%"
+                    paddingAngle={3}
+                    labelLine={false}
+                    label
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={48} />
+                </PieChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500">{t("common.noResults")}</div>
@@ -425,24 +444,40 @@ const AdminDashboardPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
         <CardHeader>
-          <CardTitle>{t("admin.statusPieChart")}</CardTitle>
-          <p className="text-sm text-gray-500 mt-1">{t("admin.statusPieChartHint")}</p>
+          <CardTitle>{t("admin.employmentTrend")}</CardTitle>
+          <p className="text-sm text-gray-500 mt-1">{t("admin.employmentTrendHint")}</p>
         </CardHeader>
         <CardContent>
-          <div className="h-[420px]">
-            {pieData.length ? (
+          <div className="h-[440px]">
+            {chartData.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={80} outerRadius={140} paddingAngle={2} label>
-                    {pieData.map((entry, index) => (
-                      <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
+                <AreaChart data={chartData} margin={{ top: 24, right: 28, left: 0, bottom: 8 }}>
+                  <defs>
+                    <linearGradient id="employmentRateGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.28} />
+                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="year" tickLine={false} axisLine={false} tickMargin={12} />
+                  <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} width={44} />
+                  <Tooltip
+                    formatter={(value: number | string, name: string) => [name === "rate" ? `${value}%` : value, name === "rate" ? t("admin.employmentRate") : t("admin.employed")]}
+                    labelFormatter={(label) => `${t("admin.year")}: ${label}`}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="rate"
+                    name={t("admin.employmentRate")}
+                    stroke="#2563EB"
+                    strokeWidth={3}
+                    fill="url(#employmentRateGradient)"
+                    dot={{ r: 4, strokeWidth: 2 }}
+                    activeDot={{ r: 7, strokeWidth: 2 }}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500">{t("common.noResults")}</div>
