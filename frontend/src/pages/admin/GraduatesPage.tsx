@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Briefcase,
@@ -20,6 +20,7 @@ import api from "@/services/api";
 interface AcademicGroup {
   id: number;
   name: string;
+  graduation_year: number | null;
 }
 
 interface Graduate {
@@ -65,6 +66,8 @@ const AdminGraduatesPage: React.FC = () => {
   const [yearFilter, setYearFilter] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [studyFormFilter, setStudyFormFilter] = useState("");
+  const [degreeLevelFilter, setDegreeLevelFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
@@ -74,9 +77,11 @@ const AdminGraduatesPage: React.FC = () => {
     if (yearFilter) params.graduation_year = yearFilter;
     if (groupFilter) params.academic_group = groupFilter;
     if (statusFilter) params.employment_status = statusFilter;
+    if (studyFormFilter) params.study_form = studyFormFilter;
+    if (degreeLevelFilter) params.degree_level = degreeLevelFilter;
     if (search) params.search = search;
     return params;
-  }, [groupFilter, search, statusFilter, yearFilter]);
+  }, [degreeLevelFilter, groupFilter, search, statusFilter, studyFormFilter, yearFilter]);
 
   const fetchGraduates = useCallback(async () => {
     setLoading(true);
@@ -119,6 +124,17 @@ const AdminGraduatesPage: React.FC = () => {
 
   const statusLabel = (graduate: Graduate) => graduate.employment_status_display || graduate.employment_status || "—";
 
+  const yearOptions = useMemo(() => {
+    const years = new Set<string>();
+    groups.forEach((group) => {
+      if (group.graduation_year) years.add(String(group.graduation_year));
+    });
+    graduates.forEach((graduate) => {
+      if (graduate.graduation_year) years.add(String(graduate.graduation_year));
+    });
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [graduates, groups]);
+
   return (
     <div className="space-y-6 px-4 md:px-10 py-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -141,7 +157,7 @@ const AdminGraduatesPage: React.FC = () => {
           <CardTitle>{t("admin.filters")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
@@ -155,7 +171,7 @@ const AdminGraduatesPage: React.FC = () => {
 
             <select className="border rounded px-3 py-2 w-full" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
               <option value="">{t("admin.yearFilter")}</option>
-              {[2026, 2025, 2024, 2023, 2022, 2021].map((year) => (
+              {yearOptions.map((year) => (
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
@@ -175,6 +191,18 @@ const AdminGraduatesPage: React.FC = () => {
               <option value="CONTINUING_EDUCATION">{t("graduate.continuingEducation")}</option>
               <option value="UNEMPLOYED">{t("graduate.unemployed")}</option>
               <option value="LOST_CONTACT">{t("graduate.lostContact")}</option>
+            </select>
+
+            <select className="border rounded px-3 py-2 w-full" value={studyFormFilter} onChange={(e) => setStudyFormFilter(e.target.value)}>
+              <option value="">{t("admin.allStudyForms")}</option>
+              <option value="FULL_TIME">{t("graduate.fullTime")}</option>
+              <option value="PART_TIME">{t("graduate.partTime")}</option>
+            </select>
+
+            <select className="border rounded px-3 py-2 w-full" value={degreeLevelFilter} onChange={(e) => setDegreeLevelFilter(e.target.value)}>
+              <option value="">{t("admin.allDegreeLevels")}</option>
+              <option value="BACHELOR">{t("graduate.bachelor")}</option>
+              <option value="MASTER">{t("graduate.master")}</option>
             </select>
           </div>
         </CardContent>

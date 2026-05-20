@@ -6,7 +6,7 @@ from pathlib import Path
 import os
 from typing import Iterable
 
-from django.db.models import Count, Q
+from django.db.models import Count, Q, QuerySet
 from django.http import HttpResponse
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -46,6 +46,38 @@ def _count_with_percent(count: int, denominator: int) -> str:
     return f"{count} / {value}%"
 
 
+def _apply_profile_filters(qs: QuerySet[AlumniProfile], request) -> QuerySet[AlumniProfile]:
+    """Apply the same report filters to analytics, PDF export and dashboard preview."""
+    exact_filters = {
+        "graduation_year": "graduation_year",
+        "academic_group": "academic_group_id",
+        "study_form": "study_form",
+        "degree_level": "degree_level",
+        "employment_status": "employment_status",
+        "direction_code": "academic_group__direction_code",
+    }
+    for query_name, orm_name in exact_filters.items():
+        value = request.query_params.get(query_name)
+        if value:
+            qs = qs.filter(**{orm_name: value})
+
+    search = request.query_params.get("search")
+    if search:
+        qs = qs.filter(
+            Q(user__first_name__icontains=search)
+            | Q(user__last_name__icontains=search)
+            | Q(user__email__icontains=search)
+            | Q(user__username__icontains=search)
+            | Q(academic_group__name__icontains=search)
+            | Q(direction__icontains=search)
+            | Q(profile__icontains=search)
+            | Q(specialty__icontains=search)
+            | Q(workplace__icontains=search)
+            | Q(position__icontains=search)
+        )
+    return qs
+
+
 class EmploymentStatsView(APIView):
     """
     Возвращает статистику трудоустройства по годам и сводку для диаграмм.
@@ -54,7 +86,8 @@ class EmploymentStatsView(APIView):
     permission_classes = (permissions.AllowAny,)
 
     def get(self, request):
-        qs = AlumniProfile.objects.values("graduation_year").annotate(
+        base_qs = _apply_profile_filters(AlumniProfile.objects.all(), request)
+        qs = base_qs.values("graduation_year").annotate(
             total=Count("id"),
             surveyed=Count("id", filter=Q(is_surveyed=True)),
             employed_specialty=Count("id", filter=Q(employment_status=AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY)),
@@ -74,7 +107,7 @@ class EmploymentStatsView(APIView):
         result = {}
         status_distribution = defaultdict(int)
         for entry in qs:
-            year = entry["graduation_year"]
+            year = entry["graduation_year"] or "Без года"
             total = entry["total"]
             surveyed = entry["surveyed"] or total
             employed = entry["employed_specialty"] + entry["employed_not_specialty"] + entry["self_employed"]
@@ -132,11 +165,13 @@ class EmploymentReportPdfView(APIView):
         story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
         story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
         story.append(Spacer(1, 4 * mm))
-        story.append(Paragraph("Раздел 1. Пофамильный список выпускников", styles["ReportSection"]))
+        story.append(Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["ReportSection"]))
         story.append(self._graduates_table(profiles, styles))
         story.append(PageBreak())
         story.append(Paragraph(REPORT_TITLE, styles["ReportTitle"]))
-        story.append(Paragraph("Раздел 2. Процентное соотношение трудоустройства", styles["ReportSection"]))
+        story.append(Paragraph(self._filter_description(request), styles["ReportSubTitle"]))
+        story.append(Spacer(1, 4 * mm))
+        story.append(Paragraph("Раздел 2. Сводные показатели трудоустройства", styles["ReportSection"]))
         story.append(self._summary_table(profiles, styles))
         story.append(Spacer(1, 12 * mm))
         story.append(Paragraph("Зав. кафедрой «ИСТ им. акад. А. Жайнакова» ____________________", styles["Normal"]))
@@ -149,35 +184,37 @@ class EmploymentReportPdfView(APIView):
 
     def _filtered_profiles(self, request):
         qs = AlumniProfile.objects.select_related("user", "employer", "academic_group").order_by(
+            "academic_group__graduation_year",
             "academic_group__name",
             "user__last_name",
             "user__first_name",
         )
-        filters = {
-            "graduation_year": "graduation_year",
-            "academic_group": "academic_group_id",
-            "study_form": "study_form",
-            "degree_level": "degree_level",
-            "employment_status": "employment_status",
-        }
-        for query_name, orm_name in filters.items():
-            value = request.query_params.get(query_name)
-            if value:
-                qs = qs.filter(**{orm_name: value})
-        return list(qs)
+        return list(_apply_profile_filters(qs, request))
 
     def _filter_description(self, request) -> str:
         parts = []
         year = request.query_params.get("graduation_year")
         group_id = request.query_params.get("academic_group")
         study_form = request.query_params.get("study_form")
+        degree_level = request.query_params.get("degree_level")
+        status = request.query_params.get("employment_status")
+        direction_code = request.query_params.get("direction_code")
+        search = request.query_params.get("search")
         if year:
             parts.append(f"год выпуска: {year}")
         if group_id:
             group = AcademicGroup.objects.filter(pk=group_id).first()
             parts.append(f"группа: {group.name if group else group_id}")
+        if direction_code:
+            parts.append(f"направление: {direction_code}")
         if study_form:
             parts.append(f"форма обучения: {dict(AcademicGroup.StudyForm.choices).get(study_form, study_form)}")
+        if degree_level:
+            parts.append(f"уровень: {dict(AcademicGroup.DegreeLevel.choices).get(degree_level, degree_level)}")
+        if status:
+            parts.append(f"статус: {dict(AlumniProfile.EmploymentStatus.choices).get(status, status)}")
+        if search:
+            parts.append(f"поиск: {search}")
         return "Фильтр: " + ", ".join(parts) if parts else "Фильтр: все группы и годы выпуска"
 
     def _register_font(self) -> str:
@@ -267,13 +304,15 @@ class EmploymentReportPdfView(APIView):
         return table
 
     def _summary_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
-        buckets: dict[tuple[str, int | None], list[AlumniProfile]] = defaultdict(list)
+        buckets: dict[tuple[str, str, str, int | None], list[AlumniProfile]] = defaultdict(list)
         for profile in profiles:
             group_name = profile.academic_group.name if profile.academic_group else "Без группы"
-            buckets[(group_name, profile.graduation_year)].append(profile)
+            direction_code = profile.academic_group.direction_code if profile.academic_group else "—"
+            profile_name = profile.profile or (profile.academic_group.profile if profile.academic_group else "—")
+            buckets[(direction_code, profile_name, group_name, profile.graduation_year)].append(profile)
 
         header = [
-            "Группа / год",
+            "Направление / профиль / группа",
             "Кол-во выпускников",
             "Кол-во опрошенных",
             "Работают по спец.",
@@ -285,7 +324,7 @@ class EmploymentReportPdfView(APIView):
             "% выпуска к поступившим",
         ]
         data = [[self._p(value, styles, center=True) for value in header]]
-        for (group_name, year), items in sorted(buckets.items(), key=lambda item: (item[0][0], item[0][1] or 0)):
+        for (direction_code, profile_name, group_name, year), items in sorted(buckets.items(), key=lambda item: (item[0][0], item[0][1], item[0][2], item[0][3] or 0)):
             group = items[0].academic_group
             total_graduates = group.total_graduates if group and group.total_graduates else len(items)
             admission_count = group.admission_count if group else None
@@ -298,8 +337,9 @@ class EmploymentReportPdfView(APIView):
                 if item.employment_status == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or item.continuing_education_place:
                     continuing_count += 1
             graduation_percent = f"{_percent(total_graduates, admission_count)}%" if admission_count else "—"
+            group_label = f"{direction_code}\n{profile_name}\n{group_name}, {year or 'без года'}"
             data.append([
-                self._p(f"{group_name}\n{year or 'без года'}", styles),
+                self._p(group_label, styles),
                 self._p(total_graduates, styles, center=True),
                 self._p(surveyed, styles, center=True),
                 self._p(_count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY], denominator), styles, center=True),
@@ -314,15 +354,14 @@ class EmploymentReportPdfView(APIView):
         table = Table(
             data,
             repeatRows=1,
-            colWidths=[38 * mm, 25 * mm, 24 * mm, 28 * mm, 28 * mm, 24 * mm, 28 * mm, 24 * mm, 24 * mm, 29 * mm],
+            colWidths=[48 * mm, 22 * mm, 23 * mm, 27 * mm, 27 * mm, 23 * mm, 27 * mm, 23 * mm, 23 * mm, 29 * mm],
         )
         table.setStyle(self._table_style())
         return table
 
     def _table_style(self) -> TableStyle:
         return TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.black),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("ALIGN", (0, 0), (-1, 0), "CENTER"),
             ("LEFTPADDING", (0, 0), (-1, -1), 2),
