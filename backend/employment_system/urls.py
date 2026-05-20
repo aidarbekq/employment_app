@@ -14,7 +14,7 @@ from drf_spectacular.views import (
 from .health import health_check
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("django-admin/", admin.site.urls),
     path("api/health/", health_check, name="health-check"),
 
     # Authentication, registration, JWT

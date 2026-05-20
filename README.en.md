@@ -54,7 +54,7 @@ After startup:
 
 ```text
 Frontend: http://localhost/
-Django admin: http://localhost/admin/
+Django admin: http://localhost/django-admin/
 API: http://localhost/api/
 Healthcheck: http://localhost/api/health/
 Swagger: http://localhost/api/docs/
