@@ -130,6 +130,7 @@
   },
   "admin": {
     "dashboard": "Панель администратора",
+    "employers": "Работодатели",
     "graduatesManagement": "Управление выпускниками",
     "employersManagement": "Управление работодателями",
     "vacanciesManagement": "Вакансии",

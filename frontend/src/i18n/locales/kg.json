@@ -132,6 +132,7 @@
   },
   "admin": {
     "dashboard": "Администратор панели",
+    "employers": "Жумуш берүүчүлөр",
     "graduatesManagement": "Бүтүрүүчүлөрдү башкаруу",
     "employersManagement": "Жумуш берүүчүлөрдү башкаруу",
     "vacanciesManagement": "Вакансиялар",

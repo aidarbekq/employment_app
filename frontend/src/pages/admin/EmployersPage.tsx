@@ -40,7 +40,7 @@ const EmployersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('admin.employers')}
+        title={t('admin.employersListTitle')}
         subtitle={t('admin.employersListHint')}
         icon={<Building2 className="h-6 w-6" />}
         actions={

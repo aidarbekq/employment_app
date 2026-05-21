@@ -130,6 +130,7 @@
   },
   "admin": {
     "dashboard": "Admin Dashboard",
+    "employers": "Employers",
     "graduatesManagement": "Graduates Management",
     "employersManagement": "Employers Management",
     "vacanciesManagement": "Vacancies",
