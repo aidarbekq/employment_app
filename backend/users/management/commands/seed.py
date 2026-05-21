@@ -652,6 +652,7 @@ class Command(BaseCommand):
                     "address": employer_data["address"],
                     "phone": employer_data["phone"],
                     "description": employer_data["description"],
+                    "is_verified": True,
                 },
             )
             employers_by_username[employer_data["username"]] = employer
