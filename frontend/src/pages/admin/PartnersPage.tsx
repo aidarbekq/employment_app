@@ -6,8 +6,10 @@ import api from '@/services/api';
 import Button from '@/components/common/Button';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import EmptyState from '@/components/common/EmptyState';
+import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
+import { usePaginatedList } from '@/hooks/usePaginatedList';
 import { InputField, SwitchField, TextareaField } from '@/components/common/FormControls';
 
 interface Partner {
@@ -58,6 +60,17 @@ const AdminPartnersPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
 
   const sortedPartners = useMemo(() => [...partners].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)), [partners]);
+
+  const {
+    currentPage,
+    endIndex,
+    pageSize,
+    paginatedItems: paginatedPartners,
+    setCurrentPage,
+    startIndex,
+    totalItems,
+    totalPages,
+  } = usePaginatedList(sortedPartners, 10, String(partners.length));
 
   const fetchPartners = useCallback(async () => {
     setLoading(true);
@@ -206,8 +219,9 @@ const AdminPartnersPage: React.FC = () => {
             {loading ? (
               <p className="py-8 text-center text-gray-500">{t('common.loading')}</p>
             ) : sortedPartners.length ? (
+              <>
               <div className="space-y-4">
-                {sortedPartners.map((partner) => (
+                {paginatedPartners.map((partner) => (
                   <article key={partner.id} className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-primary-200 hover:shadow-md">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div className="flex min-w-0 items-center gap-4">
@@ -242,6 +256,16 @@ const AdminPartnersPage: React.FC = () => {
                   </article>
                 ))}
               </div>
+              <Pagination
+                currentPage={currentPage}
+                endIndex={endIndex}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                startIndex={startIndex}
+                totalItems={totalItems}
+                totalPages={totalPages}
+              />
+              </>
             ) : (
               <EmptyState icon={<Handshake className="h-7 w-7" />} title={t('common.noResults')} description={t('common.emptyList')} />
             )}

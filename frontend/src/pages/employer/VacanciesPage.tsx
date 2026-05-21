@@ -7,9 +7,11 @@ import api from '@/services/api';
 import Button from '@/components/common/Button';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import EmptyState from '@/components/common/EmptyState';
+import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent } from '@/components/common/Card';
 import { fieldClass } from '@/components/common/FormControls';
+import { usePaginatedList } from '@/hooks/usePaginatedList';
 
 interface Vacancy {
   id: number;
@@ -74,6 +76,17 @@ const VacanciesPage: React.FC = () => {
 
   const selectedVacancy = vacancies.find((vacancy) => vacancy.id === deleteId);
 
+  const {
+    currentPage,
+    endIndex,
+    pageSize,
+    paginatedItems: paginatedVacancies,
+    setCurrentPage,
+    startIndex,
+    totalItems,
+    totalPages,
+  } = usePaginatedList(filtered, 10, search);
+
   if (loading) return <p className="mt-10 text-center text-gray-500">{t('common.loading')}</p>;
 
   return (
@@ -105,8 +118,9 @@ const VacanciesPage: React.FC = () => {
           </div>
 
           {filtered.length > 0 ? (
+            <>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {filtered.map((vacancy) => (
+              {paginatedVacancies.map((vacancy) => (
                 <article
                   key={vacancy.id}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
@@ -166,6 +180,16 @@ const VacanciesPage: React.FC = () => {
                 </article>
               ))}
             </div>
+            <Pagination
+              currentPage={currentPage}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              startIndex={startIndex}
+              totalItems={totalItems}
+              totalPages={totalPages}
+            />
+            </>
           ) : (
             <EmptyState
               icon={<Briefcase className="h-7 w-7" />}

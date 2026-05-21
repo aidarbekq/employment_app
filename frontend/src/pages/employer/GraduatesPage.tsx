@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, Briefcase, Calendar, Eye, FileText, GraduationCap, Search, XCircle } from 'lucide-react';
+import { Briefcase, Calendar, Eye, FileText, GraduationCap, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
 import EmptyState from '@/components/common/EmptyState';
+import EmploymentStatusBadge from '@/components/common/EmploymentStatusBadge';
+import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent } from '@/components/common/Card';
 import { fieldClass } from '@/components/common/FormControls';
+import { usePaginatedList } from '@/hooks/usePaginatedList';
 
 interface AcademicGroup {
   id: number;
@@ -78,6 +81,17 @@ const EmployerGraduatesPage: React.FC = () => {
 
   const statusLabel = (graduate: Graduate) => graduate.employment_status_display || (graduate.is_employed ? t('graduate.employed') : t('graduate.unemployed'));
 
+  const {
+    currentPage,
+    endIndex,
+    pageSize,
+    paginatedItems: paginatedGraduates,
+    setCurrentPage,
+    startIndex,
+    totalItems,
+    totalPages,
+  } = usePaginatedList(graduates, 10, `${search}|${yearFilter}|${employmentFilter}`);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -119,8 +133,9 @@ const EmployerGraduatesPage: React.FC = () => {
           {loading ? (
             <div className="py-12 text-center text-gray-500">{t('common.loading')}</div>
           ) : graduates.length ? (
+            <>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {graduates.map((graduate) => (
+              {paginatedGraduates.map((graduate) => (
                 <article key={graduate.id} className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex min-w-0 gap-4">
@@ -150,10 +165,7 @@ const EmployerGraduatesPage: React.FC = () => {
                       <Briefcase className="mr-1.5 h-4 w-4 text-gray-400" />
                       {graduate.position || graduate.workplace || t('common.notSpecified')}
                     </span>
-                    <span className={graduate.is_employed ? 'inline-flex items-center rounded-full bg-success-50 px-3 py-1.5 font-medium text-success-700 ring-1 ring-success-100' : 'inline-flex items-center rounded-full bg-warning-50 px-3 py-1.5 font-medium text-warning-700 ring-1 ring-warning-100'}>
-                      {graduate.is_employed ? <BadgeCheck className="mr-1.5 h-4 w-4" /> : <XCircle className="mr-1.5 h-4 w-4" />}
-                      {statusLabel(graduate)}
-                    </span>
+                    <EmploymentStatusBadge status={graduate.employment_status} label={statusLabel(graduate)} />
                     {graduate.resume && (
                       <a href={graduate.resume} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1.5 font-medium text-primary-700 ring-1 ring-primary-100 hover:bg-primary-100">
                         <FileText className="mr-1.5 h-4 w-4" />
@@ -164,6 +176,16 @@ const EmployerGraduatesPage: React.FC = () => {
                 </article>
               ))}
             </div>
+            <Pagination
+              currentPage={currentPage}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              startIndex={startIndex}
+              totalItems={totalItems}
+              totalPages={totalPages}
+            />
+            </>
           ) : (
             <EmptyState icon={<GraduationCap className="h-7 w-7" />} title={t('common.noResults')} description={t('common.tryAdjustingFilters')} />
           )}

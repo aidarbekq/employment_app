@@ -198,7 +198,7 @@
     "totalGraduatesHint": "Graduates in the current selection",
     "employedHint": "Employed in specialty, outside specialty or self-employed",
     "tableSubtitle": "Year-by-year counts and percentages for each employment category.",
-    "employmentTrendHint": "Bars show graduates by category; the line shows the overall employment rate.",
+    "employmentTrendHint": "Blue bars show surveyed and employed graduates, the line shows the overall employment rate.",
     "statusPieChartHint": "Graduate status distribution for the current selection.",
     "groupsManagement": "Academic groups",
     "groupsManagementHint": "Add graduate groups, direction, profile, study form and graduation year for accurate reporting.",
@@ -256,7 +256,11 @@
     "details": "Details",
     "saving": "Saving...",
     "emptyList": "The list is empty",
-    "showMore": "Show more"
+    "showMore": "Show more",
+    "pagination": "Pagination",
+    "paginationSummary": "Showing {{start}}–{{end}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next"
   },
   "vacancy": {
     "myVacancies": "My Vacancies",

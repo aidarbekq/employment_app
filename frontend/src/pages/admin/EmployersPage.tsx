@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
 import EmptyState from '@/components/common/EmptyState';
+import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent } from '@/components/common/Card';
 import { fieldClass } from '@/components/common/FormControls';
+import { usePaginatedList } from '@/hooks/usePaginatedList';
 
 interface Employer {
   id: number;
@@ -54,6 +56,17 @@ const EmployersPage: React.FC = () => {
     );
   }, [employers, search]);
 
+  const {
+    currentPage,
+    endIndex,
+    pageSize,
+    paginatedItems: paginatedEmployers,
+    setCurrentPage,
+    startIndex,
+    totalItems,
+    totalPages,
+  } = usePaginatedList(filtered, 10, search);
+
   if (loading) return <p className="mt-10 text-center text-gray-500">{t('admin.loadingEmployers')}</p>;
 
   return (
@@ -85,8 +98,9 @@ const EmployersPage: React.FC = () => {
           </div>
 
           {filtered.length > 0 ? (
+            <>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {filtered.map((employer) => {
+              {paginatedEmployers.map((employer) => {
                 const initials = (employer.company_name || employer.user?.email || '—').slice(0, 2).toUpperCase();
                 return (
                   <article
@@ -132,6 +146,16 @@ const EmployersPage: React.FC = () => {
                 );
               })}
             </div>
+            <Pagination
+              currentPage={currentPage}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              startIndex={startIndex}
+              totalItems={totalItems}
+              totalPages={totalPages}
+            />
+            </>
           ) : (
             <EmptyState
               icon={<Building2 className="h-7 w-7" />}

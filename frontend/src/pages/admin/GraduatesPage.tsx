@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  BadgeCheck,
   Briefcase,
   Calendar,
   Eye,
@@ -8,7 +7,6 @@ import {
   GraduationCap,
   Plus,
   Search,
-  XCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,9 +14,12 @@ import api from '@/services/api';
 import Button from '@/components/common/Button';
 import ExportMenu, { ExportFormat } from '@/components/common/ExportMenu';
 import EmptyState from '@/components/common/EmptyState';
+import EmploymentStatusBadge from '@/components/common/EmploymentStatusBadge';
+import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { fieldClass } from '@/components/common/FormControls';
+import { usePaginatedList } from '@/hooks/usePaginatedList';
 
 interface AcademicGroup {
   id: number;
@@ -143,6 +144,21 @@ const AdminGraduatesPage: React.FC = () => {
 
   const statusLabel = (graduate: Graduate) => graduate.employment_status_display || graduate.employment_status || t('common.notSpecified');
 
+  const {
+    currentPage,
+    endIndex,
+    pageSize,
+    paginatedItems: paginatedGraduates,
+    setCurrentPage,
+    startIndex,
+    totalItems,
+    totalPages,
+  } = usePaginatedList(
+    graduates,
+    10,
+    `${search}|${yearFilter}|${groupFilter}|${statusFilter}|${studyFormFilter}|${degreeLevelFilter}`
+  );
+
   const yearOptions = useMemo(() => {
     const years = new Set<string>();
     groups.forEach((group) => {
@@ -241,8 +257,9 @@ const AdminGraduatesPage: React.FC = () => {
           {loading ? (
             <div className="py-12 text-center text-gray-500">{t('common.loading')}</div>
           ) : graduates.length ? (
+            <>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {graduates.map((graduate) => (
+              {paginatedGraduates.map((graduate) => (
                 <article
                   key={graduate.id}
                   className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
@@ -275,16 +292,7 @@ const AdminGraduatesPage: React.FC = () => {
                       <Briefcase className="mr-1.5 h-4 w-4 text-gray-400" />
                       {graduate.position || graduate.workplace || t('common.notSpecified')}
                     </span>
-                    <span
-                      className={
-                        graduate.is_employed
-                          ? 'inline-flex items-center rounded-full bg-success-50 px-3 py-1.5 font-medium text-success-700 ring-1 ring-success-100'
-                          : 'inline-flex items-center rounded-full bg-warning-50 px-3 py-1.5 font-medium text-warning-700 ring-1 ring-warning-100'
-                      }
-                    >
-                      {graduate.is_employed ? <BadgeCheck className="mr-1.5 h-4 w-4" /> : <XCircle className="mr-1.5 h-4 w-4" />}
-                      {statusLabel(graduate)}
-                    </span>
+                    <EmploymentStatusBadge status={graduate.employment_status} label={statusLabel(graduate)} />
                     {graduate.resume && (
                       <a
                         href={graduate.resume}
@@ -300,6 +308,16 @@ const AdminGraduatesPage: React.FC = () => {
                 </article>
               ))}
             </div>
+            <Pagination
+              currentPage={currentPage}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              startIndex={startIndex}
+              totalItems={totalItems}
+              totalPages={totalPages}
+            />
+            </>
           ) : (
             <EmptyState icon={<GraduationCap className="h-7 w-7" />} title={t('common.noResults')} description={t('common.tryAdjustingFilters')} />
           )}
