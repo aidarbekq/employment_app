@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Briefcase,
   Calendar,
@@ -19,7 +19,8 @@ import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
 import { fieldClass } from '@/components/common/FormControls';
-import { usePaginatedList } from '@/hooks/usePaginatedList';
+import { useServerPaginatedList } from '@/hooks/useServerPaginatedList';
+import { getListResults, getPaginationRange } from '@/utils/pagination';
 
 interface AcademicGroup {
   id: number;
@@ -71,7 +72,6 @@ const getFileNameFromDisposition = (disposition: string | undefined, fallback: s
 
 const AdminGraduatesPage: React.FC = () => {
   const { t } = useTranslation();
-  const [graduates, setGraduates] = useState<Graduate[]>([]);
   const [groups, setGroups] = useState<AcademicGroup[]>([]);
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -79,50 +79,45 @@ const AdminGraduatesPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [studyFormFilter, setStudyFormFilter] = useState('');
   const [degreeLevelFilter, setDegreeLevelFilter] = useState('');
-  const [loading, setLoading] = useState(true);
   const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
   const navigate = useNavigate();
 
-  const buildParams = useCallback(() => {
-    const params: Record<string, string> = {};
-    if (yearFilter) params.graduation_year = yearFilter;
-    if (groupFilter) params.academic_group = groupFilter;
-    if (statusFilter) params.employment_status = statusFilter;
-    if (studyFormFilter) params.study_form = studyFormFilter;
-    if (degreeLevelFilter) params.degree_level = degreeLevelFilter;
-    if (search) params.search = search;
-    return params;
+  const params = useMemo(() => {
+    const next: Record<string, string> = {
+      ordering: 'user__last_name,user__first_name',
+    };
+    if (yearFilter) next.graduation_year = yearFilter;
+    if (groupFilter) next.academic_group = groupFilter;
+    if (statusFilter) next.employment_status = statusFilter;
+    if (studyFormFilter) next.study_form = studyFormFilter;
+    if (degreeLevelFilter) next.degree_level = degreeLevelFilter;
+    if (search) next.search = search;
+    return next;
   }, [degreeLevelFilter, groupFilter, search, statusFilter, studyFormFilter, yearFilter]);
 
-  const fetchGraduates = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('alumni/alumni-profiles/', { params: buildParams() });
-      const filtered = (res.data as Graduate[]).filter((graduate) => graduate.user?.role === 'ALUMNI');
-      setGraduates(filtered);
-    } catch (err) {
-      console.error('Error loading graduates', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [buildParams]);
+  const {
+    items: graduates,
+    loading,
+    meta,
+    setPage,
+  } = useServerPaginatedList<Graduate>('alumni/alumni-profiles/', {
+    params,
+    mapResults: (items) => items.filter((graduate) => graduate.user?.role === 'ALUMNI'),
+  });
+  const { startIndex, endIndex } = getPaginationRange(meta);
 
   useEffect(() => {
     api
-      .get('alumni/academic-groups/')
-      .then((res) => setGroups(res.data as AcademicGroup[]))
+      .get('alumni/academic-groups/', { params: { page_size: 100, ordering: '-graduation_year,name' } })
+      .then((res) => setGroups(getListResults<AcademicGroup>(res.data)))
       .catch((err) => console.error('Error loading groups', err));
   }, []);
-
-  useEffect(() => {
-    fetchGraduates();
-  }, [fetchGraduates]);
 
   const handleExport = async (format: ExportFormat) => {
     setExportingFormat(format);
     try {
       const res = await api.get(`analytics/employment-report.${format}`, {
-        params: buildParams(),
+        params,
         responseType: 'blob',
       });
       downloadBlob(res.data as Blob, getFileNameFromDisposition(res.headers['content-disposition'], `employment_report.${format}`));
@@ -144,31 +139,13 @@ const AdminGraduatesPage: React.FC = () => {
 
   const statusLabel = (graduate: Graduate) => graduate.employment_status_display || graduate.employment_status || t('common.notSpecified');
 
-  const {
-    currentPage,
-    endIndex,
-    pageSize,
-    paginatedItems: paginatedGraduates,
-    setCurrentPage,
-    startIndex,
-    totalItems,
-    totalPages,
-  } = usePaginatedList(
-    graduates,
-    10,
-    `${search}|${yearFilter}|${groupFilter}|${statusFilter}|${studyFormFilter}|${degreeLevelFilter}`
-  );
-
   const yearOptions = useMemo(() => {
     const years = new Set<string>();
     groups.forEach((group) => {
       if (group.graduation_year) years.add(String(group.graduation_year));
     });
-    graduates.forEach((graduate) => {
-      if (graduate.graduation_year) years.add(String(graduate.graduation_year));
-    });
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
-  }, [graduates, groups]);
+  }, [groups]);
 
   return (
     <div className="space-y-6">
@@ -258,65 +235,65 @@ const AdminGraduatesPage: React.FC = () => {
             <div className="py-12 text-center text-gray-500">{t('common.loading')}</div>
           ) : graduates.length ? (
             <>
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {paginatedGraduates.map((graduate) => (
-                <article
-                  key={graduate.id}
-                  className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex min-w-0 gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 ring-1 ring-primary-100">
-                        <GraduationCap className="h-6 w-6" />
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {graduates.map((graduate) => (
+                  <article
+                    key={graduate.id}
+                    className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex min-w-0 gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 ring-1 ring-primary-100">
+                          <GraduationCap className="h-6 w-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-lg font-bold text-gray-900">
+                            {graduate.user.first_name} {graduate.user.last_name}
+                          </h3>
+                          <p className="mt-1 truncate text-sm text-gray-500">
+                            {graduate.academic_group?.name || t('common.notSpecified')} · {graduate.profile || graduate.specialty || t('common.notSpecified')}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate text-lg font-bold text-gray-900">
-                          {graduate.user.first_name} {graduate.user.last_name}
-                        </h3>
-                        <p className="mt-1 truncate text-sm text-gray-500">
-                          {graduate.academic_group?.name || t('common.notSpecified')} · {graduate.profile || graduate.specialty || t('common.notSpecified')}
-                        </p>
-                      </div>
+                      <Button size="sm" variant="outline" leftIcon={<Eye className="h-4 w-4" />} onClick={() => navigate(`/admin/graduates/${graduate.id}`)}>
+                        {t('common.view')}
+                      </Button>
                     </div>
-                    <Button size="sm" variant="outline" leftIcon={<Eye className="h-4 w-4" />} onClick={() => navigate(`/admin/graduates/${graduate.id}`)}>
-                      {t('common.view')}
-                    </Button>
-                  </div>
 
-                  <div className="mt-5 flex flex-wrap gap-2 text-sm text-gray-700">
-                    <span className="inline-flex items-center rounded-full bg-gray-50 px-3 py-1.5 ring-1 ring-gray-100">
-                      <Calendar className="mr-1.5 h-4 w-4 text-gray-400" />
-                      {graduate.graduation_year || t('common.notSpecified')}
-                    </span>
-                    <span className="inline-flex items-center rounded-full bg-gray-50 px-3 py-1.5 ring-1 ring-gray-100">
-                      <Briefcase className="mr-1.5 h-4 w-4 text-gray-400" />
-                      {graduate.position || graduate.workplace || t('common.notSpecified')}
-                    </span>
-                    <EmploymentStatusBadge status={graduate.employment_status} label={statusLabel(graduate)} />
-                    {graduate.resume && (
-                      <a
-                        href={graduate.resume}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1.5 font-medium text-primary-700 ring-1 ring-primary-100 hover:bg-primary-100"
-                      >
-                        <FileText className="mr-1.5 h-4 w-4" />
-                        {t('graduate.resume')}
-                      </a>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
-            <Pagination
-              currentPage={currentPage}
-              endIndex={endIndex}
-              onPageChange={setCurrentPage}
-              pageSize={pageSize}
-              startIndex={startIndex}
-              totalItems={totalItems}
-              totalPages={totalPages}
-            />
+                    <div className="mt-5 flex flex-wrap gap-2 text-sm text-gray-700">
+                      <span className="inline-flex items-center rounded-full bg-gray-50 px-3 py-1.5 ring-1 ring-gray-100">
+                        <Calendar className="mr-1.5 h-4 w-4 text-gray-400" />
+                        {graduate.graduation_year || t('common.notSpecified')}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-gray-50 px-3 py-1.5 ring-1 ring-gray-100">
+                        <Briefcase className="mr-1.5 h-4 w-4 text-gray-400" />
+                        {graduate.position || graduate.workplace || t('common.notSpecified')}
+                      </span>
+                      <EmploymentStatusBadge status={graduate.employment_status} label={statusLabel(graduate)} />
+                      {graduate.resume && (
+                        <a
+                          href={graduate.resume}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1.5 font-medium text-primary-700 ring-1 ring-primary-100 hover:bg-primary-100"
+                        >
+                          <FileText className="mr-1.5 h-4 w-4" />
+                          {t('graduate.resume')}
+                        </a>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <Pagination
+                currentPage={meta.page}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                pageSize={meta.pageSize}
+                startIndex={startIndex}
+                totalItems={meta.count}
+                totalPages={meta.totalPages}
+              />
             </>
           ) : (
             <EmptyState icon={<GraduationCap className="h-7 w-7" />} title={t('common.noResults')} description={t('common.tryAdjustingFilters')} />

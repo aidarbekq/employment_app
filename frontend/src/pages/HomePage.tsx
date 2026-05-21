@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+import { getListResults, getPaginationMeta } from '@/utils/pagination';
 
 interface EmploymentStatsEntry {
   total: number;
@@ -59,6 +60,7 @@ const HomePage: React.FC = () => {
   const [totalGraduates, setTotalGraduates] = useState<number | null>(null);
   const [totalEmployers, setTotalEmployers] = useState<number | null>(null);
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [totalPartners, setTotalPartners] = useState(0);
   const [isHeroImageAvailable, setIsHeroImageAvailable] = useState(Boolean(heroImage));
 
   useEffect(() => {
@@ -89,8 +91,11 @@ const HomePage: React.FC = () => {
 
     const fetchPartners = async () => {
       try {
-        const res = await api.get('employers/partners/');
-        setPartners(res.data as Partner[]);
+        const res = await api.get('employers/partners/', {
+          params: { page_size: PARTNERS_LIMIT, ordering: 'order,name' },
+        });
+        setPartners(getListResults<Partner>(res.data));
+        setTotalPartners(getPaginationMeta<Partner>(res.data, 1, PARTNERS_LIMIT).count);
       } catch (error) {
         console.error('Failed to load partners:', error);
       }
@@ -102,7 +107,7 @@ const HomePage: React.FC = () => {
 
   const hasHeroImage = Boolean(heroImage && isHeroImageAvailable);
   const visiblePartners = useMemo(() => partners.slice(0, PARTNERS_LIMIT), [partners]);
-  const hiddenPartnersCount = Math.max(partners.length - PARTNERS_LIMIT, 0);
+  const hiddenPartnersCount = Math.max(totalPartners - visiblePartners.length, 0);
 
   const statsCards = [
     {

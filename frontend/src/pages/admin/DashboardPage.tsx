@@ -5,6 +5,7 @@ import Button from "@/components/common/Button";
 import ExportMenu, { ExportFormat } from "@/components/common/ExportMenu";
 import { FilterX, RefreshCw, TrendingUp, Users, UserCheck, Briefcase } from "lucide-react";
 import api from "@/services/api";
+import { getListResults } from "@/utils/pagination";
 import {
   Area,
   Bar,
@@ -141,8 +142,8 @@ const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => {
     api
-      .get("alumni/academic-groups/")
-      .then((res) => setGroups(res.data as AcademicGroup[]))
+      .get("alumni/academic-groups/", { params: { page_size: 100, ordering: "-graduation_year,name" } })
+      .then((res) => setGroups(getListResults<AcademicGroup>(res.data)))
       .catch((error) => console.error("Error loading groups", error));
   }, []);
 

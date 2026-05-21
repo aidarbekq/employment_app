@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
+import { getListResults } from "@/utils/pagination";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -70,8 +71,8 @@ const EmployerPage: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await api.get("employers/employers/");
-      const my = (res.data as EmployerProfile[]).find((item) => item.user?.id === user.id);
+      const res = await api.get("employers/employers/", { params: { page_size: 100 } });
+      const my = getListResults<EmployerProfile>(res.data).find((item) => item.user?.id === user.id);
       if (!my) {
         setProfile(null);
         toast.error(t("common.error"));

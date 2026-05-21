@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
+import { getListResults } from "@/utils/pagination";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Button from "@/components/common/Button";
@@ -140,8 +141,8 @@ const ProfilePage: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await api.get("alumni/alumni-profiles/");
-      const my = (res.data as Profile[]).find((item) =>
+      const res = await api.get("alumni/alumni-profiles/", { params: { page_size: 100 } });
+      const my = getListResults<Profile>(res.data).find((item) =>
         typeof item.user === "object" ? item.user.id === user.id : item.user === user.id
       );
       if (!my) return;
@@ -156,8 +157,8 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     api
-      .get("alumni/academic-groups/")
-      .then((res) => setGroups(res.data as AcademicGroup[]))
+      .get("alumni/academic-groups/", { params: { page_size: 100, ordering: "-graduation_year,name" } })
+      .then((res) => setGroups(getListResults<AcademicGroup>(res.data)))
       .catch(() => toast.error(t("common.error")));
   }, [t]);
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Edit, Layers, Plus, Trash2 } from 'lucide-react';
@@ -9,7 +9,8 @@ import EmptyState from '@/components/common/EmptyState';
 import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
-import { usePaginatedList } from '@/hooks/usePaginatedList';
+import { useServerPaginatedList } from '@/hooks/useServerPaginatedList';
+import { getPaginationRange } from '@/utils/pagination';
 import { InputField, SelectField, SwitchField } from '@/components/common/FormControls';
 
 interface AcademicGroup {
@@ -72,46 +73,23 @@ const toPayload = (form: GroupFormData) => ({
 
 const AdminGroupsPage: React.FC = () => {
   const { t } = useTranslation();
-  const [groups, setGroups] = useState<AcademicGroup[]>([]);
   const [formData, setFormData] = useState<GroupFormData>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AcademicGroup | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const sortedGroups = useMemo(
-    () => [...groups].sort((a, b) => (b.graduation_year ?? 0) - (a.graduation_year ?? 0) || a.name.localeCompare(b.name)),
-    [groups]
-  );
-
   const {
-    currentPage,
-    endIndex,
-    pageSize,
-    paginatedItems: paginatedGroups,
-    setCurrentPage,
-    startIndex,
-    totalItems,
-    totalPages,
-  } = usePaginatedList(sortedGroups, 10, String(groups.length));
-
-  const loadGroups = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('alumni/academic-groups/');
-      setGroups(res.data as AcademicGroup[]);
-    } catch (error) {
-      console.error('Error loading academic groups', error);
-      toast.error(t('common.error'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    loadGroups();
-  }, [loadGroups]);
+    items: groups,
+    loading,
+    meta,
+    refetch: loadGroups,
+    setPage,
+  } = useServerPaginatedList<AcademicGroup>('alumni/academic-groups/', {
+    params: { ordering: '-graduation_year,name' },
+    onError: () => toast.error(t('common.error')),
+  });
+  const { startIndex, endIndex } = getPaginationRange(meta);
 
   const updateField = <K extends keyof GroupFormData>(field: K, value: GroupFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -216,10 +194,10 @@ const AdminGroupsPage: React.FC = () => {
           <CardContent>
             {loading ? (
               <p className="py-8 text-center text-gray-500">{t('common.loading')}</p>
-            ) : sortedGroups.length ? (
+            ) : groups.length ? (
               <>
               <div className="space-y-3">
-                {paginatedGroups.map((group) => (
+                {groups.map((group) => (
                   <article key={group.id} className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-primary-200 hover:shadow-md">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
@@ -251,13 +229,13 @@ const AdminGroupsPage: React.FC = () => {
                 ))}
               </div>
               <Pagination
-                currentPage={currentPage}
+                currentPage={meta.page}
                 endIndex={endIndex}
-                onPageChange={setCurrentPage}
-                pageSize={pageSize}
+                onPageChange={setPage}
+                pageSize={meta.pageSize}
                 startIndex={startIndex}
-                totalItems={totalItems}
-                totalPages={totalPages}
+                totalItems={meta.count}
+                totalPages={meta.totalPages}
               />
               </>
             ) : (

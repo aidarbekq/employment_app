@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Briefcase, Calendar, Pencil, Plus, Search, Trash2, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,8 @@ import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent } from '@/components/common/Card';
 import { fieldClass } from '@/components/common/FormControls';
-import { usePaginatedList } from '@/hooks/usePaginatedList';
+import { useServerPaginatedList } from '@/hooks/useServerPaginatedList';
+import { getPaginationRange } from '@/utils/pagination';
 
 interface Vacancy {
   id: number;
@@ -27,44 +28,31 @@ interface Vacancy {
 
 const VacanciesPage: React.FC = () => {
   const { t } = useTranslation();
-  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchVacancies = async () => {
-      try {
-        const res = await api.get('vacancies/vacancies/');
-        setVacancies(res.data);
-      } catch (err) {
-        console.error('Error loading vacancies', err);
-        toast.error(t('vacancy.errorLoad'));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVacancies();
-  }, [t]);
-
-  const filtered = useMemo(() => {
-    const query = search.toLowerCase();
-    return vacancies.filter((vacancy) =>
-      [vacancy.title, vacancy.location, vacancy.employer, vacancy.description].some((field) =>
-        field?.toLowerCase().includes(query)
-      )
-    );
-  }, [search, vacancies]);
+  const params = useMemo(() => ({ search, ordering: '-created_at' }), [search]);
+  const {
+    items: vacancies,
+    loading,
+    meta,
+    refetch,
+    setPage,
+  } = useServerPaginatedList<Vacancy>('vacancies/vacancies/', {
+    params,
+    onError: () => toast.error(t('vacancy.errorLoad')),
+  });
+  const { startIndex, endIndex } = getPaginationRange(meta);
 
   const confirmDelete = async () => {
     if (deleteId === null) return;
     setDeleting(true);
     try {
       await api.delete(`vacancies/vacancies/${deleteId}/`);
-      setVacancies((prev) => prev.filter((vacancy) => vacancy.id !== deleteId));
       toast.success(t('vacancy.successDelete'));
+      await refetch();
     } catch (err) {
       console.error('Error deleting vacancy', err);
       toast.error(t('vacancy.errorDelete'));
@@ -75,17 +63,6 @@ const VacanciesPage: React.FC = () => {
   };
 
   const selectedVacancy = vacancies.find((vacancy) => vacancy.id === deleteId);
-
-  const {
-    currentPage,
-    endIndex,
-    pageSize,
-    paginatedItems: paginatedVacancies,
-    setCurrentPage,
-    startIndex,
-    totalItems,
-    totalPages,
-  } = usePaginatedList(filtered, 10, search);
 
   if (loading) return <p className="mt-10 text-center text-gray-500">{t('common.loading')}</p>;
 
@@ -117,78 +94,78 @@ const VacanciesPage: React.FC = () => {
             </div>
           </div>
 
-          {filtered.length > 0 ? (
+          {vacancies.length > 0 ? (
             <>
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {paginatedVacancies.map((vacancy) => (
-                <article
-                  key={vacancy.id}
-                  className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex min-w-0 gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 ring-1 ring-primary-100">
-                        <Briefcase className="h-6 w-6" />
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {vacancies.map((vacancy) => (
+                  <article
+                    key={vacancy.id}
+                    className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex min-w-0 gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 ring-1 ring-primary-100">
+                          <Briefcase className="h-6 w-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-lg font-bold text-gray-900">{vacancy.title || t('common.notSpecified')}</h3>
+                          <p className="mt-1 truncate text-sm text-gray-500">{vacancy.employer}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate text-lg font-bold text-gray-900">{vacancy.title || t('common.notSpecified')}</h3>
-                        <p className="mt-1 truncate text-sm text-gray-500">{vacancy.employer}</p>
+                      <span
+                        className={
+                          vacancy.is_active
+                            ? 'rounded-full bg-success-50 px-3 py-1 text-xs font-semibold text-success-700 ring-1 ring-success-100'
+                            : 'rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200'
+                        }
+                      >
+                        {vacancy.is_active ? t('vacancy.active') : t('vacancy.inactive')}
+                      </span>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2">
+                      <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span className="truncate">{vacancy.location || t('common.notSpecified')}</span>
+                      </div>
+                      <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span>{new Date(vacancy.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
-                    <span
-                      className={
-                        vacancy.is_active
-                          ? 'rounded-full bg-success-50 px-3 py-1 text-xs font-semibold text-success-700 ring-1 ring-success-100'
-                          : 'rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200'
-                      }
-                    >
-                      {vacancy.is_active ? t('vacancy.active') : t('vacancy.inactive')}
-                    </span>
-                  </div>
 
-                  <div className="mt-5 grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2">
-                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <span className="truncate">{vacancy.location || t('common.notSpecified')}</span>
+                    {vacancy.description && <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-500">{vacancy.description}</p>}
+
+                    <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        leftIcon={<Pencil className="h-4 w-4" />}
+                        onClick={() => navigate(`/employer/vacancies/${vacancy.id}/edit`)}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        leftIcon={<Trash2 className="h-4 w-4" />}
+                        onClick={() => setDeleteId(vacancy.id)}
+                      >
+                        {t('common.delete')}
+                      </Button>
                     </div>
-                    <div className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span>{new Date(vacancy.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-
-                  {vacancy.description && <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-500">{vacancy.description}</p>}
-
-                  <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      leftIcon={<Pencil className="h-4 w-4" />}
-                      onClick={() => navigate(`/employer/vacancies/${vacancy.id}/edit`)}
-                    >
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      leftIcon={<Trash2 className="h-4 w-4" />}
-                      onClick={() => setDeleteId(vacancy.id)}
-                    >
-                      {t('common.delete')}
-                    </Button>
-                  </div>
-                </article>
-              ))}
-            </div>
-            <Pagination
-              currentPage={currentPage}
-              endIndex={endIndex}
-              onPageChange={setCurrentPage}
-              pageSize={pageSize}
-              startIndex={startIndex}
-              totalItems={totalItems}
-              totalPages={totalPages}
-            />
+                  </article>
+                ))}
+              </div>
+              <Pagination
+                currentPage={meta.page}
+                endIndex={endIndex}
+                onPageChange={setPage}
+                pageSize={meta.pageSize}
+                startIndex={startIndex}
+                totalItems={meta.count}
+                totalPages={meta.totalPages}
+              />
             </>
           ) : (
             <EmptyState

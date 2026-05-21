@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+import { getListResults } from '@/utils/pagination';
 import { Download, FileText, Trash2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -29,8 +30,8 @@ const ResumePage: React.FC = () => {
     if (!user) return;
 
     try {
-      const res = await api.get('alumni/alumni-profiles/');
-      const myProfile = (res.data as AlumniProfileSummary[]).find((profile) => {
+      const res = await api.get('alumni/alumni-profiles/', { params: { page_size: 100 } });
+      const myProfile = getListResults<AlumniProfileSummary>(res.data).find((profile) => {
         if (typeof profile.user === 'object') return profile.user.id === user.id;
         return profile.user === user.id;
       });

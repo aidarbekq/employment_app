@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, GraduationCap, KeyRound, Save, Trash2, UserRound } from 'lucide-react';
 import api from '@/services/api';
+import { getListResults } from '@/utils/pagination';
 import Button from '@/components/common/Button';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import PageHeader from '@/components/common/PageHeader';
@@ -106,11 +107,11 @@ const AdminGraduateDetailPage: React.FC = () => {
   const selectedGroup = useMemo(() => groups.find((group) => String(group.id) === form.academic_group_id), [groups, form.academic_group_id]);
 
   useEffect(() => {
-    Promise.all([api.get(`alumni/alumni-profiles/${id}/`), api.get('alumni/academic-groups/')])
+    Promise.all([api.get(`alumni/alumni-profiles/${id}/`), api.get('alumni/academic-groups/', { params: { page_size: 100, ordering: '-graduation_year,name' } })])
       .then(([graduateResponse, groupResponse]) => {
         const data = graduateResponse.data as Graduate;
         setGraduate(data);
-        setGroups(groupResponse.data as AcademicGroup[]);
+        setGroups(getListResults<AcademicGroup>(groupResponse.data));
         setForm({
           academic_group_id: data.academic_group ? String(data.academic_group.id) : '',
           specialty: data.specialty ?? '',
