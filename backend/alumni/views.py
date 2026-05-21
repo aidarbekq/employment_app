@@ -31,11 +31,13 @@ class IsAlumniOwnerOrReadOnly(permissions.BasePermission):
 
 
 class AcademicGroupViewSet(viewsets.ModelViewSet):
-    queryset = AcademicGroup.objects.all()
+    queryset = AcademicGroup.objects.all().order_by("-graduation_year", "name")
     serializer_class = AcademicGroupSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ["graduation_year", "study_form", "degree_level", "is_active"]
-    search_fields = ["name", "direction_name", "profile"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["graduation_year", "study_form", "degree_level", "is_active", "direction_code"]
+    search_fields = ["name", "direction_name", "profile", "direction_code"]
+    ordering_fields = ["name", "graduation_year", "direction_code", "study_form", "degree_level"]
+    ordering = ["-graduation_year", "name"]
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
@@ -44,10 +46,12 @@ class AcademicGroupViewSet(viewsets.ModelViewSet):
 
 
 class AlumniProfileViewSet(viewsets.ModelViewSet):
-    queryset = AlumniProfile.objects.all().select_related("user", "employer", "academic_group")
+    queryset = AlumniProfile.objects.all().select_related("user", "employer", "academic_group").order_by(
+        "user__last_name", "user__first_name", "id"
+    )
     serializer_class = AlumniProfileSerializer
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         "graduation_year",
         "is_employed",
@@ -64,6 +68,7 @@ class AlumniProfileViewSet(viewsets.ModelViewSet):
         "user__first_name",
         "user__last_name",
         "user__email",
+        "user__username",
         "specialty",
         "direction",
         "profile",
@@ -71,6 +76,8 @@ class AlumniProfileViewSet(viewsets.ModelViewSet):
         "workplace",
         "position",
     ]
+    ordering_fields = ["graduation_year", "user__last_name", "user__first_name", "academic_group__name", "employment_status"]
+    ordering = ["user__last_name", "user__first_name", "id"]
 
     def get_serializer_class(self):
         if self.action == "create" and self.request.user.role == self.request.user.Roles.ADMIN:
@@ -92,7 +99,9 @@ class AlumniProfileViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        base_qs = AlumniProfile.objects.all().select_related("user", "employer", "academic_group")
+        base_qs = AlumniProfile.objects.all().select_related("user", "employer", "academic_group").order_by(
+            "user__last_name", "user__first_name", "id"
+        )
         if user.role in (user.Roles.ADMIN, user.Roles.EMPLOYER):
             return base_qs
         return base_qs.filter(user=user)

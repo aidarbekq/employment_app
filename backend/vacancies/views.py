@@ -18,11 +18,13 @@ class IsVacancyOwnerOrReadOnly(permissions.BasePermission):
         return obj.employer.user == request.user
 
 class VacancyViewSet(viewsets.ModelViewSet):
-    queryset = Vacancy.objects.all().select_related("employer")
+    queryset = Vacancy.objects.all().select_related("employer").order_by("-created_at", "id")
     serializer_class = VacancySerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ["is_active", "location", "salary", 'created_at']
-    search_fields = ["title", "description", "requirements"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["is_active", "location", "salary", "created_at"]
+    search_fields = ["title", "description", "requirements", "location", "employer__company_name"]
+    ordering_fields = ["created_at", "title", "location", "salary"]
+    ordering = ["-created_at", "id"]
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
@@ -38,8 +40,8 @@ class VacancyViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_authenticated:
             if user.role == user.Roles.EMPLOYER:
-                return Vacancy.objects.filter(employer__user=user)
+                return Vacancy.objects.filter(employer__user=user).select_related("employer").order_by("-created_at", "id")
             if user.role == user.Roles.ADMIN:
-                return Vacancy.objects.all()  # админ видит всё
-        return Vacancy.objects.filter(is_active=True)
+                return Vacancy.objects.all().select_related("employer").order_by("-created_at", "id")  # админ видит всё
+        return Vacancy.objects.filter(is_active=True).select_related("employer").order_by("-created_at", "id")
 

@@ -20,10 +20,12 @@ class IsEmployerOwnerOrReadOnly(permissions.BasePermission):
 
 
 class EmployerViewSet(viewsets.ModelViewSet):
-    queryset = Employer.objects.all().select_related("user")
+    queryset = Employer.objects.all().select_related("user").order_by("company_name")
     serializer_class = EmployerSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["company_name", "address", "phone"]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["company_name", "address", "phone", "user__email", "user__username"]
+    ordering_fields = ["company_name", "address", "id"]
+    ordering = ["company_name"]
 
 
     def get_serializer_class(self):
@@ -45,21 +47,23 @@ class EmployerViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == user.Roles.ADMIN:
-            return Employer.objects.all().select_related("user")
+            return Employer.objects.all().select_related("user").order_by("company_name")
         if user.role == user.Roles.EMPLOYER:
-            return Employer.objects.filter(user=user).select_related("user")
-        return Employer.objects.all().select_related("user")
+            return Employer.objects.filter(user=user).select_related("user").order_by("company_name")
+        return Employer.objects.all().select_related("user").order_by("company_name")
 
 
 class PartnerViewSet(viewsets.ModelViewSet):
-    queryset = Partner.objects.all().select_related("employer")
+    queryset = Partner.objects.all().select_related("employer").order_by("order", "name")
     serializer_class = PartnerSerializer
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "description", "website"]
+    ordering_fields = ["order", "name", "id"]
+    ordering = ["order", "name"]
 
     def get_queryset(self):
-        qs = Partner.objects.all().select_related("employer")
+        qs = Partner.objects.all().select_related("employer").order_by("order", "name")
         user = self.request.user
         if not (user.is_authenticated and user.role == user.Roles.ADMIN):
             qs = qs.filter(is_active=True)
