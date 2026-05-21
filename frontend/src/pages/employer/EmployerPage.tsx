@@ -156,18 +156,18 @@ const EmployerPage: React.FC = () => {
   if (!profile) return <p className="text-center mt-8 text-red-600">{t("common.error")}</p>;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-0 py-4 sm:px-4 sm:py-8">
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-primary-700 to-primary-900 px-6 py-8 text-white">
+        <div className="bg-gradient-to-r from-primary-700 to-primary-900 px-4 py-6 text-white sm:px-6 sm:py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-xl font-bold">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="h-16 w-16 shrink-0 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-xl font-bold">
                 {initials}
               </div>
               <div>
                 <p className="text-sm text-primary-100">{t("employer.profile")}</p>
-                <h1 className="text-2xl font-bold">{formData.company_name || t("employer.company")}</h1>
-                <p className="text-primary-100 text-sm mt-1">{formData.description || t("common.notSpecified")}</p>
+                <h1 className="text-2xl font-bold leading-tight break-words">{formData.company_name || t("employer.company")}</h1>
+                <p className="text-primary-100 text-sm mt-1 break-words">{formData.description || t("common.notSpecified")}</p>
                 <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white">
                   <ShieldCheck className="h-4 w-4" />
                   {profile.is_verified ? t("employer.verified") : t("employer.pendingVerification")}
@@ -197,7 +197,7 @@ const EmployerPage: React.FC = () => {
           </div>
         </div>
 
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           {!isEditing ? (
             <div className="space-y-6">
               {!profile.is_verified && (
@@ -231,7 +231,7 @@ const EmployerPage: React.FC = () => {
 
               <section className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-2">{t("employer.description")}</p>
-                {formData.description ? <p className="text-sm text-gray-800 leading-6 whitespace-pre-line">{formData.description}</p> : <EmptyValue />}
+                {formData.description ? <p className="text-sm text-gray-800 leading-6 whitespace-pre-line break-words">{formData.description}</p> : <EmptyValue />}
               </section>
             </div>
           ) : (

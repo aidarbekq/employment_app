@@ -247,7 +247,7 @@ const ProfilePage: React.FC = () => {
   const TextBlock = ({ label, value }: { label: string; value: string }) => (
     <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-2">{label}</p>
-      {value ? <p className="text-sm text-gray-800 leading-6 whitespace-pre-line">{value}</p> : <EmptyValue />}
+      {value ? <p className="text-sm text-gray-800 leading-6 whitespace-pre-line break-words">{value}</p> : <EmptyValue />}
     </div>
   );
 
@@ -255,18 +255,18 @@ const ProfilePage: React.FC = () => {
   if (!profile) return <p className="text-center mt-8 text-red-600">{t("common.error")}</p>;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-0 py-4 sm:px-4 sm:py-8">
       <Card className="overflow-hidden rounded-2xl border-gray-100 shadow-sm">
-        <div className="bg-gradient-to-r from-primary-700 to-primary-900 px-6 py-8 text-white">
+        <div className="bg-gradient-to-r from-primary-700 to-primary-900 px-4 py-6 text-white sm:px-6 sm:py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="h-16 w-16 shrink-0 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
                 <UserCircle className="h-10 w-10 text-white" />
               </div>
               <div>
                 <p className="text-sm text-primary-100">{t("graduate.profile")}</p>
-                <h1 className="text-2xl font-bold">{displayName}</h1>
-                <p className="text-primary-100 text-sm mt-1 inline-flex items-center gap-2">
+                <h1 className="text-2xl font-bold leading-tight break-words">{displayName}</h1>
+                <p className="text-primary-100 text-sm mt-1 inline-flex max-w-full items-center gap-2 break-words">
                   <Mail className="h-4 w-4" />
                   {formData.email || t("common.notSpecified")}
                 </p>
@@ -281,7 +281,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           {!isEditing ? (
             <div className="space-y-6">
               <section>
