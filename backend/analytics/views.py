@@ -169,7 +169,7 @@ REPORT_TEXTS: dict[str, dict[str, str]] = {
         "employed_specialty_header": "адистиги боюнча\n(кызматы, иштеген жери)",
         "not_specialty_self_employed_header": "адистиги боюнча эмес\n/ өз алдынча иш",
         "not_working_unknown_header": "иштебейт\n/ белгисиз",
-        "continued_education_where": "Окуусун улантты\nкайда",
+        "continued_education_where": "Окуусун уланткан\nжери",
         "useful_question": "Факультетте окутулган кайсы нерселер азыркы ишиңизде эң пайдалуу болду?",
         "self_study_question": "Эмнени өз алдынча үйрөнүүгө туура келди?",
         "employed_specialty": "Адистиги боюнча (кызматы, иштеген жери)",
