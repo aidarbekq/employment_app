@@ -65,7 +65,7 @@ const AdminPartnersPage: React.FC = () => {
     refetch: fetchPartners,
     setPage,
   } = useServerPaginatedList<Partner>('employers/partners/', {
-    params: { ordering: 'order,name' },
+    params: { ordering: 'order,name', include_inactive: 'true' },
     onError: () => toast.error(t('common.error')),
   });
   const { startIndex, endIndex } = getPaginationRange(meta);

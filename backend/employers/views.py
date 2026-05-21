@@ -62,12 +62,27 @@ class PartnerViewSet(viewsets.ModelViewSet):
     ordering_fields = ["order", "name", "id"]
     ordering = ["order", "name"]
 
+    @staticmethod
+    def _is_truthy(value):
+        return str(value).lower() in {"1", "true", "yes", "on"}
+
     def get_queryset(self):
         qs = Partner.objects.all().select_related("employer").order_by("order", "name")
         user = self.request.user
-        if not (user.is_authenticated and user.role == user.Roles.ADMIN):
-            qs = qs.filter(is_active=True)
-        return qs
+        is_admin = bool(user and user.is_authenticated and user.role == user.Roles.ADMIN)
+
+        # The same endpoint is used by the public home page and by the admin panel.
+        # Public list requests must never expose hidden partners, even when an admin
+        # is currently logged in and Axios sends a JWT token automatically.
+        if self.action == "list":
+            include_inactive = self._is_truthy(self.request.query_params.get("include_inactive"))
+            if is_admin and include_inactive:
+                return qs
+            return qs.filter(is_active=True)
+
+        if is_admin:
+            return qs
+        return qs.filter(is_active=True)
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
