@@ -126,7 +126,12 @@
     "phone": "Phone",
     "first_name": "First Name",
     "last_name": "Last Name",
-    "email": "Email"
+    "email": "Email",
+    "verified": "Verified",
+    "pendingVerification": "Pending review",
+    "pendingVerificationHint": "The employer profile is waiting for administrator review. Graduate access and vacancy publishing are limited until approval.",
+    "verificationStatus": "Verification status",
+    "verificationHint": "Verified employers can publish vacancies and browse graduate profiles."
   },
   "admin": {
     "dashboard": "Admin Dashboard",

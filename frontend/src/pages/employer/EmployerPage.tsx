@@ -5,7 +5,7 @@ import { getListResults } from "@/utils/pagination";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Building2, Edit3, KeyRound, Mail, MapPin, Phone, UserCircle } from "lucide-react";
+import { Building2, Edit3, KeyRound, Mail, MapPin, Phone, ShieldCheck, UserCircle } from "lucide-react";
 import Button from "@/components/common/Button";
 import { Card, CardContent } from "@/components/common/Card";
 import { InputField, TextareaField } from "@/components/common/FormControls";
@@ -33,6 +33,7 @@ interface EmployerProfile {
   address: string;
   phone: string;
   description: string;
+  is_verified: boolean;
   user: UserInfo;
 }
 
@@ -167,6 +168,10 @@ const EmployerPage: React.FC = () => {
                 <p className="text-sm text-primary-100">{t("employer.profile")}</p>
                 <h1 className="text-2xl font-bold">{formData.company_name || t("employer.company")}</h1>
                 <p className="text-primary-100 text-sm mt-1">{formData.description || t("common.notSpecified")}</p>
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white">
+                  <ShieldCheck className="h-4 w-4" />
+                  {profile.is_verified ? t("employer.verified") : t("employer.pendingVerification")}
+                </div>
               </div>
             </div>
             {!isEditing && (
@@ -195,6 +200,11 @@ const EmployerPage: React.FC = () => {
         <CardContent className="p-6">
           {!isEditing ? (
             <div className="space-y-6">
+              {!profile.is_verified && (
+                <div className="rounded-2xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-800">
+                  {t("employer.pendingVerificationHint")}
+                </div>
+              )}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <Building2 className="h-5 w-5 text-primary-600" />

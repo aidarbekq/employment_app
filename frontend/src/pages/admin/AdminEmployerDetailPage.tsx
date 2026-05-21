@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Building2, KeyRound, Mail, MapPin, Pencil, Phone, Save, Trash2, UserCircle } from 'lucide-react';
+import { ArrowLeft, Building2, KeyRound, Mail, MapPin, Pencil, Phone, Save, ShieldCheck, Trash2, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
@@ -25,6 +25,7 @@ interface Employer {
   address: string;
   phone: string;
   description: string;
+  is_verified: boolean;
 }
 
 const AdminEmployerDetailPage: React.FC = () => {
@@ -58,6 +59,10 @@ const AdminEmployerDetailPage: React.FC = () => {
     setEmployer((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
+  const updateVerified = (value: boolean) => {
+    setEmployer((prev) => (prev ? { ...prev, is_verified: value } : prev));
+  };
+
   const handleUpdate = async () => {
     if (!employer) return;
     setSaving(true);
@@ -67,6 +72,7 @@ const AdminEmployerDetailPage: React.FC = () => {
         address: employer.address,
         phone: employer.phone,
         description: employer.description,
+        is_verified: employer.is_verified,
       });
       toast.success(t('common.success'));
       setIsEditing(false);
@@ -129,6 +135,10 @@ const AdminEmployerDetailPage: React.FC = () => {
         <div className="bg-gradient-to-r from-primary-700 to-primary-900 px-5 py-6 text-white sm:px-6">
           <p className="text-sm text-primary-100">{t('employer.company')}</p>
           <h2 className="mt-1 text-2xl font-bold">{employer.company_name || t('common.notSpecified')}</h2>
+          <span className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${employer.is_verified ? 'border-success-200 bg-success-50 text-success-700' : 'border-warning-200 bg-warning-50 text-warning-700'}`}>
+            <ShieldCheck className="h-4 w-4" />
+            {employer.is_verified ? t('employer.verified') : t('employer.pendingVerification')}
+          </span>
         </div>
         <CardContent className="space-y-6 p-5 sm:p-6">
           {!isEditing ? (
@@ -140,6 +150,7 @@ const AdminEmployerDetailPage: React.FC = () => {
                 <DetailItem label={t('auth.firstName')} value={employer.user?.first_name} icon={<UserCircle className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
                 <DetailItem label={t('auth.lastName')} value={employer.user?.last_name} icon={<UserCircle className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
                 <DetailItem label={t('auth.email')} value={employer.user?.email} icon={<Mail className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
+                <DetailItem label={t('employer.verificationStatus')} value={employer.is_verified ? t('employer.verified') : t('employer.pendingVerification')} icon={<ShieldCheck className="h-4 w-4" />} emptyText={t('common.notSpecified')} />
               </div>
               <DetailItem label={t('employer.description')} value={employer.description ? <p className="whitespace-pre-line">{employer.description}</p> : undefined} emptyText={t('common.notSpecified')} className="bg-white" />
             </>
@@ -149,6 +160,18 @@ const AdminEmployerDetailPage: React.FC = () => {
               <InputField label={t('employer.address')} value={employer.address || ''} onChange={(event) => updateField('address', event.target.value)} />
               <InputField label={t('employer.phone')} value={employer.phone || ''} onChange={(event) => updateField('phone', event.target.value)} />
               <TextareaField className="md:col-span-2" label={t('employer.description')} rows={5} value={employer.description || ''} onChange={(event) => updateField('description', event.target.value)} />
+              <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={employer.is_verified}
+                  onChange={(event) => updateVerified(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span>
+                  <span className="block font-semibold text-gray-900">{t('employer.verified')}</span>
+                  <span className="block text-gray-500">{t('employer.verificationHint')}</span>
+                </span>
+              </label>
               <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl shadow-gray-950/10 backdrop-blur sm:flex-row sm:justify-end md:col-span-2">
                 <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
                   {t('common.cancel')}

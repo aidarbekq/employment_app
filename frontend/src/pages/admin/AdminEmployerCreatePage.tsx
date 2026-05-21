@@ -21,6 +21,7 @@ type EmployerCreateForm = {
   address: string;
   phone: string;
   description: string;
+  is_verified: boolean;
 };
 
 const initialForm: EmployerCreateForm = {
@@ -34,6 +35,7 @@ const initialForm: EmployerCreateForm = {
   address: '',
   phone: '',
   description: '',
+  is_verified: true,
 };
 
 const AdminEmployerCreatePage: React.FC = () => {
@@ -96,6 +98,18 @@ const AdminEmployerCreatePage: React.FC = () => {
                 <InputField label={t('employer.address')} value={form.address} onChange={(event) => updateForm('address', event.target.value)} />
                 <InputField label={t('employer.phone')} value={form.phone} onChange={(event) => updateForm('phone', event.target.value)} />
                 <TextareaField label={t('employer.description')} value={form.description} onChange={(event) => updateForm('description', event.target.value)} rows={5} className="md:col-span-2" />
+                <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={form.is_verified}
+                    onChange={(event) => updateForm('is_verified', event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span>
+                    <span className="block font-semibold text-gray-900">{t('employer.verified')}</span>
+                    <span className="block text-gray-500">{t('employer.verificationHint')}</span>
+                  </span>
+                </label>
               </CardContent>
             </Card>
 

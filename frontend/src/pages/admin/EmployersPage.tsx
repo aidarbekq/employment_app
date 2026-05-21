@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Building2, Eye, MapPin, Phone, Plus, Search } from 'lucide-react';
+import { Building2, Eye, MapPin, Phone, Plus, Search, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/common/Button';
@@ -24,6 +24,7 @@ interface Employer {
   address: string;
   phone: string;
   description: string | null;
+  is_verified: boolean;
 }
 
 const EmployersPage: React.FC = () => {
@@ -83,6 +84,10 @@ const EmployersPage: React.FC = () => {
                             {employer.company_name || t('common.notSpecified')}
                           </h3>
                           <p className="mt-1 truncate text-sm text-gray-500">{employer.user?.email || t('common.notSpecified')}</p>
+                          <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${employer.is_verified ? 'bg-success-50 text-success-700 ring-1 ring-success-100' : 'bg-warning-50 text-warning-700 ring-1 ring-warning-100'}`}>
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            {employer.is_verified ? t('employer.verified') : t('employer.pendingVerification')}
+                          </span>
                         </div>
                       </div>
                       <Button
