@@ -15,7 +15,6 @@ createRoot(document.getElementById('root')!).render(
           position="bottom-right"
           visibleToasts={3}
           closeButton={false}
-          className="[&_[data-close-button]]:hidden"
           toastOptions={{
             duration: 2800,
             classNames: {
