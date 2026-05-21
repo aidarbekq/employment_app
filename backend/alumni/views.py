@@ -1,6 +1,7 @@
 import csv
+from pathlib import Path
 
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, viewsets
 from rest_framework.decorators import action
@@ -80,7 +81,8 @@ class AlumniProfileViewSet(viewsets.ModelViewSet):
     ordering = ["user__last_name", "user__first_name", "id"]
 
     def get_serializer_class(self):
-        if self.action == "create" and self.request.user.role == self.request.user.Roles.ADMIN:
+        user = getattr(self.request, "user", None)
+        if self.action == "create" and user and user.is_authenticated and user.role == user.Roles.ADMIN:
             return AdminAlumniCreateSerializer
         if self.action in ("list", "retrieve"):
             return GetAlumniProfileSerializer
@@ -102,9 +104,26 @@ class AlumniProfileViewSet(viewsets.ModelViewSet):
         base_qs = AlumniProfile.objects.all().select_related("user", "employer", "academic_group").order_by(
             "user__last_name", "user__first_name", "id"
         )
-        if user.role in (user.Roles.ADMIN, user.Roles.EMPLOYER):
+        if not user or not user.is_authenticated:
+            return base_qs.none()
+        if user.role == user.Roles.ADMIN:
             return base_qs
+        if user.role == user.Roles.EMPLOYER:
+            employer_profile = getattr(user, "employer_profile", None)
+            if employer_profile and employer_profile.is_verified:
+                return base_qs
+            return base_qs.none()
         return base_qs.filter(user=user)
+
+
+    @action(detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def resume(self, request, pk=None):
+        profile = self.get_object()
+        if not profile.resume:
+            raise Http404("Resume was not uploaded.")
+        file_handle = profile.resume.open("rb")
+        filename = Path(profile.resume.name).name
+        return FileResponse(file_handle, as_attachment=True, filename=filename)
 
     @action(detail=False, methods=["get"], permission_classes=[IsAdminUserRole])
     def export_csv(self, request):

@@ -13,8 +13,14 @@ class EmployerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employer
-        fields = ("id", "user", "company_name", "address", "phone", "description")
+        fields = ("id", "user", "company_name", "address", "phone", "description", "is_verified")
         read_only_fields = ("user",)
+
+    def validate_is_verified(self, value):
+        request = self.context.get("request")
+        if not (request and request.user and request.user.is_authenticated and request.user.role == request.user.Roles.ADMIN):
+            raise serializers.ValidationError("Only an administrator can change employer verification status.")
+        return value
 
 
 class AdminEmployerCreateSerializer(serializers.Serializer):
@@ -28,6 +34,13 @@ class AdminEmployerCreateSerializer(serializers.Serializer):
     address = serializers.CharField(max_length=512, required=False, allow_blank=True, allow_null=True)
     phone = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    is_verified = serializers.BooleanField(required=False, default=True)
+
+    def validate_email(self, value):
+        normalized = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return normalized
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -45,6 +58,7 @@ class AdminEmployerCreateSerializer(serializers.Serializer):
             "address": validated_data.pop("address", "") or "",
             "phone": validated_data.pop("phone", "") or "",
             "description": validated_data.pop("description", "") or "",
+            "is_verified": validated_data.pop("is_verified", True),
         }
         password = validated_data.pop("password")
         validated_data.pop("password2")
@@ -87,7 +101,7 @@ class PartnerSerializer(serializers.ModelSerializer):
             "website": {"required": False, "allow_blank": True},
         }
 
-    def get_logo_url(self, obj):
+    def get_logo_url(self, obj) -> str | None:
         if not obj.logo:
             return None
         request = self.context.get("request")

@@ -29,7 +29,8 @@ class EmployerViewSet(viewsets.ModelViewSet):
 
 
     def get_serializer_class(self):
-        if self.action == "create" and self.request.user.role == self.request.user.Roles.ADMIN:
+        user = getattr(self.request, "user", None)
+        if self.action == "create" and user and user.is_authenticated and user.role == user.Roles.ADMIN:
             return AdminEmployerCreateSerializer
         return EmployerSerializer
 
@@ -46,6 +47,8 @@ class EmployerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if not user or not user.is_authenticated:
+            return Employer.objects.none()
         if user.role == user.Roles.ADMIN:
             return Employer.objects.all().select_related("user").order_by("company_name")
         if user.role == user.Roles.EMPLOYER:

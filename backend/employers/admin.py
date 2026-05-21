@@ -5,8 +5,9 @@ from .models import Employer, Partner
 
 @admin.register(Employer)
 class EmployerAdmin(admin.ModelAdmin):
-    list_display = ("company_name", "user", "phone")
-    search_fields = ("company_name", "user__username")
+    list_display = ("company_name", "user", "phone", "is_verified")
+    list_filter = ("is_verified",)
+    search_fields = ("company_name", "user__username", "user__email")
 
 
 @admin.register(Partner)

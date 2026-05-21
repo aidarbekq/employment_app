@@ -17,6 +17,10 @@ class Employer(models.Model):
     address = models.CharField(max_length=512, null=True, blank=True)
     phone = models.CharField(max_length=50, null=True, blank=True)
     description = models.TextField(blank=True, null=True, help_text="Brief description of the company")
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Only verified employers can view graduate profiles and publish vacancies.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
