@@ -30,6 +30,23 @@ REPORT_SUBTITLE = "Кафедра «Информационные системы 
 UNKNOWN_LABEL = "Неизвестно"
 
 
+class RotatedParagraph(Paragraph):
+    """A paragraph rotated 90 degrees for narrow PDF table headers."""
+
+    def wrap(self, avail_width, avail_height):
+        width, height = Paragraph.wrap(self, avail_height, avail_width)
+        self._rotated_width = height
+        return height, width
+
+    def draw(self):
+        canvas = self.canv
+        canvas.saveState()
+        canvas.rotate(90)
+        canvas.translate(0, -self._rotated_width)
+        Paragraph.draw(self)
+        canvas.restoreState()
+
+
 class IsAdminUserRole(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.role == request.user.Roles.ADMIN)
@@ -221,17 +238,26 @@ class EmploymentReportExportView(APIView):
         base.add(ParagraphStyle(name="ReportSubTitle", fontName=font_name, fontSize=8.5, leading=10.5, alignment=TA_CENTER, spaceAfter=1.5 * mm))
         base.add(ParagraphStyle(name="ReportMeta", fontName=font_name, fontSize=8, leading=10, alignment=TA_CENTER, spaceAfter=3 * mm))
         base.add(ParagraphStyle(name="ReportSection", fontName=font_name, fontSize=10.5, leading=12.5, alignment=TA_CENTER, spaceBefore=1 * mm, spaceAfter=3 * mm))
-        base.add(ParagraphStyle(name="Cell", fontName=font_name, fontSize=5.8, leading=6.7, alignment=TA_LEFT))
-        base.add(ParagraphStyle(name="CellCenter", fontName=font_name, fontSize=5.8, leading=6.7, alignment=TA_CENTER))
+        base.add(ParagraphStyle(name="Cell", fontName=font_name, fontSize=5.6, leading=6.4, alignment=TA_LEFT))
+        base.add(ParagraphStyle(name="CellCenter", fontName=font_name, fontSize=5.6, leading=6.4, alignment=TA_CENTER))
+        base.add(ParagraphStyle(name="HeaderCell", fontName=font_name, fontSize=5.8, leading=6.5, alignment=TA_CENTER))
+        base.add(ParagraphStyle(name="HeaderCellSmall", fontName=font_name, fontSize=5.3, leading=5.9, alignment=TA_CENTER))
+        base.add(ParagraphStyle(name="VerticalHeader", fontName=font_name, fontSize=5.4, leading=6.0, alignment=TA_CENTER))
         base["Normal"].fontName = font_name
         base["Normal"].fontSize = 8
         base["Normal"].leading = 10
         return base
 
-    def _p(self, value, styles, center: bool = False) -> Paragraph:
+    def _p(self, value, styles, center: bool = False, style_name: str | None = None) -> Paragraph:
         text = "—" if value in (None, "") else str(value)
         text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
-        return Paragraph(text, styles["CellCenter" if center else "Cell"])
+        selected_style = style_name or ("CellCenter" if center else "Cell")
+        return Paragraph(text, styles[selected_style])
+
+    def _vertical_p(self, value, styles) -> RotatedParagraph:
+        text = "—" if value in (None, "") else str(value)
+        text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+        return RotatedParagraph(text, styles["VerticalHeader"])
 
     def _work_text(self, profile: AlumniProfile) -> str:
         company = profile.employer.company_name if profile.employer else profile.workplace
@@ -247,6 +273,11 @@ class EmploymentReportExportView(APIView):
 
     def _full_name(self, profile: AlumniProfile) -> str:
         return profile.user.get_full_name() or profile.user.username
+
+    def _full_name_with_group(self, profile: AlumniProfile) -> str:
+        full_name = self._full_name(profile)
+        group_name = profile.academic_group.name if profile.academic_group else ""
+        return f"{full_name} ({group_name})" if group_name else full_name
 
     def _direction_profile_text(self, profile: AlumniProfile) -> str:
         direction = profile.direction or profile.specialty
@@ -357,18 +388,70 @@ class EmploymentReportExportView(APIView):
         table.setStyle(self._table_style())
         return table
 
+    def _graduate_reference_headers(self, styles) -> list[list[Paragraph | RotatedParagraph | str]]:
+        return [
+            [
+                self._p("№", styles, center=True, style_name="HeaderCell"),
+                self._p("ФИО", styles, center=True, style_name="HeaderCell"),
+                self._vertical_p("Год окончания", styles),
+                self._vertical_p("Специальность по диплому", styles),
+                self._p("Трудоустройство", styles, center=True, style_name="HeaderCell"),
+                "",
+                "",
+                self._p("Продолжил обучение\nУказать где именно", styles, center=True, style_name="HeaderCell"),
+                self._p(
+                    "Что из преподававшегося на факультете наиболее полезно в вашей сегодняшней работе?",
+                    styles,
+                    center=True,
+                    style_name="HeaderCellSmall",
+                ),
+                self._p("Что пришлось изучать самостоятельно?", styles, center=True, style_name="HeaderCellSmall"),
+            ],
+            [
+                "",
+                "",
+                "",
+                "",
+                self._p("по спец.\n(указать должность, место работы)", styles, center=True, style_name="HeaderCellSmall"),
+                self._p("не по спец.\n/ самозанятость", styles, center=True, style_name="HeaderCellSmall"),
+                self._p("не работает\n/ неизвестно", styles, center=True, style_name="HeaderCellSmall"),
+                "",
+                "",
+                "",
+            ],
+        ]
+
+    def _pdf_profile_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
+        status_value = profile.employment_status
+        work = self._work_text(profile)
+        return [
+            index,
+            self._full_name_with_group(profile),
+            profile.graduation_year or "—",
+            profile.specialty or self._direction_profile_text(profile),
+            work if status_value == AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY else "—",
+            work if status_value in (AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY, AlumniProfile.EmploymentStatus.SELF_EMPLOYED) else "—",
+            self._not_working_text(profile),
+            profile.continuing_education_place
+            if status_value == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or profile.continuing_education_place
+            else "—",
+            profile.useful_subjects or "—",
+            profile.self_study_topics or "—",
+        ]
+
     def _graduates_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
-        data = [[self._p(value, styles, center=True) for value in self._graduate_headers()]]
+        data = self._graduate_reference_headers(styles)
         for index, profile in enumerate(profiles, start=1):
-            row = self._profile_row_values(profile, index)
-            data.append([self._p(value, styles, center=column_index in (0, 2, 3, 4)) for column_index, value in enumerate(row)])
+            row = self._pdf_profile_row_values(profile, index)
+            data.append([self._p(value, styles, center=column_index in (0, 2, 3)) for column_index, value in enumerate(row)])
 
         table = Table(
             data,
-            repeatRows=1,
-            colWidths=[7 * mm, 30 * mm, 19 * mm, 13 * mm, 22 * mm, 31 * mm, 29 * mm, 21 * mm, 25 * mm, 37 * mm, 30 * mm],
+            repeatRows=2,
+            colWidths=[7 * mm, 46 * mm, 10 * mm, 13 * mm, 35 * mm, 31 * mm, 18 * mm, 34 * mm, 55 * mm, 40 * mm],
+            rowHeights=[31 * mm, 13 * mm] + [None] * max(len(data) - 2, 0),
         )
-        table.setStyle(self._table_style())
+        table.setStyle(self._graduate_table_style())
         return table
 
     def _summary_headers(self) -> list[str]:
@@ -450,10 +533,10 @@ class EmploymentReportExportView(APIView):
         doc = SimpleDocTemplate(
             buffer,
             pagesize=landscape(A4),
-            leftMargin=6 * mm,
-            rightMargin=6 * mm,
-            topMargin=7 * mm,
-            bottomMargin=7 * mm,
+            leftMargin=4 * mm,
+            rightMargin=4 * mm,
+            topMargin=6 * mm,
+            bottomMargin=6 * mm,
             title="employment_report",
         )
         story = [
@@ -461,11 +544,7 @@ class EmploymentReportExportView(APIView):
             Paragraph(REPORT_SUBTITLE, styles["ReportSubTitle"]),
             Paragraph(selection_description, styles["ReportMeta"]),
             Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["ReportSection"]),
-            Paragraph("1.1. Основные сведения", styles["Normal"]),
-            self._graduates_main_table(profiles, styles),
-            Spacer(1, 4 * mm),
-            Paragraph("1.2. Анкетные сведения", styles["Normal"]),
-            self._survey_table(profiles, styles),
+            self._graduates_table(profiles, styles),
             PageBreak(),
             Paragraph(REPORT_TITLE, styles["ReportTitle"]),
             Paragraph(REPORT_SUBTITLE, styles["ReportSubTitle"]),
@@ -666,6 +745,26 @@ class EmploymentReportExportView(APIView):
         )
         response["Content-Disposition"] = f'attachment; filename="{self._report_filename("xlsx")}"'
         return response
+
+    def _graduate_table_style(self) -> TableStyle:
+        return TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#111827")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("VALIGN", (0, 2), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (-1, 1), "CENTER"),
+            ("SPAN", (0, 0), (0, 1)),
+            ("SPAN", (1, 0), (1, 1)),
+            ("SPAN", (2, 0), (2, 1)),
+            ("SPAN", (3, 0), (3, 1)),
+            ("SPAN", (4, 0), (6, 0)),
+            ("SPAN", (7, 0), (7, 1)),
+            ("SPAN", (8, 0), (8, 1)),
+            ("SPAN", (9, 0), (9, 1)),
+            ("LEFTPADDING", (0, 0), (-1, -1), 1.2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 1.2),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.4),
+        ])
 
     def _table_style(self) -> TableStyle:
         return TableStyle([
