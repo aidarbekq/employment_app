@@ -1,8 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Calendar, CheckCircle, Eye, MapPin, Search, XCircle } from 'lucide-react';
+import { Briefcase, Calendar, CheckCircle, Eye, MapPin, Pencil, Plus, Search, Trash2, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import api from '@/services/api';
 import Button from '@/components/common/Button';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import EmptyState from '@/components/common/EmptyState';
 import Pagination from '@/components/common/Pagination';
 import PageHeader from '@/components/common/PageHeader';
@@ -38,6 +41,8 @@ const AdminVacanciesPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [isActiveFilter, setIsActiveFilter] = useState<ActiveFilter>('');
   const [createdSort, setCreatedSort] = useState<CreatedSort>('desc');
+  const [vacancyToDelete, setVacancyToDelete] = useState<Vacancy | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -48,8 +53,24 @@ const AdminVacanciesPage: React.FC = () => {
     [createdSort, isActiveFilter, search]
   );
 
-  const { items: vacancies, loading, meta, setPage } = useServerPaginatedList<Vacancy>('vacancies/vacancies/', { params });
+  const { items: vacancies, loading, meta, setPage, refetch } = useServerPaginatedList<Vacancy>('vacancies/vacancies/', { params });
   const { startIndex, endIndex } = getPaginationRange(meta);
+
+  const handleDelete = async () => {
+    if (!vacancyToDelete) return;
+
+    try {
+      setDeleting(true);
+      await api.delete(`vacancies/vacancies/${vacancyToDelete.id}/`);
+      toast.success(t('vacancy.successDelete'));
+      setVacancyToDelete(null);
+      await refetch();
+    } catch {
+      toast.error(t('vacancy.errorDelete'));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) return <p className="mt-10 text-center text-gray-500">{t('common.loading')}</p>;
 
@@ -59,6 +80,11 @@ const AdminVacanciesPage: React.FC = () => {
         title={t('admin.vacancies')}
         subtitle={t('admin.vacanciesListHint')}
         icon={<Briefcase className="h-6 w-6" />}
+        actions={
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/admin/vacancies/create')}>
+            {t('vacancy.addVacancy')}
+          </Button>
+        }
       />
 
       <Card className="overflow-hidden">
@@ -142,7 +168,7 @@ const AdminVacanciesPage: React.FC = () => {
                         <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-500">{vacancy.description}</p>
                       )}
 
-                      <div className="mt-5 flex justify-end">
+                      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button
                           size="sm"
                           variant="outline"
@@ -150,6 +176,22 @@ const AdminVacanciesPage: React.FC = () => {
                           onClick={() => navigate(`/admin/vacancies/${vacancy.id}`)}
                         >
                           {t('common.view')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="soft"
+                          leftIcon={<Pencil className="h-4 w-4" />}
+                          onClick={() => navigate(`/admin/vacancies/${vacancy.id}/edit`)}
+                        >
+                          {t('common.edit')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          leftIcon={<Trash2 className="h-4 w-4" />}
+                          onClick={() => setVacancyToDelete(vacancy)}
+                        >
+                          {t('common.delete')}
                         </Button>
                       </div>
                     </article>
@@ -175,6 +217,17 @@ const AdminVacanciesPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(vacancyToDelete)}
+        title={t('common.confirmDelete')}
+        description={t('vacancy.confirmDelete', { title: vacancyToDelete?.title || '' }) || t('common.deleteDescription')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        loading={deleting}
+        onCancel={() => setVacancyToDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

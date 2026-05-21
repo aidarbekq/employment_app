@@ -1,16 +1,23 @@
 import React from 'react';
-import { Briefcase, ClipboardList } from 'lucide-react';
+import { Briefcase, Building2, ClipboardList } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/common/Button';
-import { InputField, SwitchField, TextareaField } from '@/components/common/FormControls';
+import { InputField, SelectField, SwitchField, TextareaField } from '@/components/common/FormControls';
 
 export interface VacancyFormData {
+  employer_id?: string;
   title: string;
   description: string;
   requirements: string;
   location: string;
   salary: string;
   is_active?: boolean;
+}
+
+export interface EmployerOption {
+  id: number;
+  company_name?: string;
+  is_verified?: boolean;
 }
 
 interface VacancyFormProps {
@@ -20,6 +27,9 @@ interface VacancyFormProps {
   submitLabel: string;
   isSubmitting?: boolean;
   showStatus?: boolean;
+  showEmployerSelect?: boolean;
+  employers?: EmployerOption[];
+  employersLoading?: boolean;
   onCancel?: () => void;
 }
 
@@ -30,6 +40,9 @@ const VacancyForm: React.FC<VacancyFormProps> = ({
   submitLabel,
   isSubmitting = false,
   showStatus = false,
+  showEmployerSelect = false,
+  employers = [],
+  employersLoading = false,
   onCancel,
 }) => {
   const { t } = useTranslation();
@@ -37,6 +50,8 @@ const VacancyForm: React.FC<VacancyFormProps> = ({
   const updateField = (field: keyof VacancyFormData, value: string | boolean) => {
     onChange({ ...data, [field]: value });
   };
+
+  const hasSelectableEmployer = !showEmployerSelect || employers.some((employer) => employer.is_verified);
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -52,6 +67,26 @@ const VacancyForm: React.FC<VacancyFormProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {showEmployerSelect && (
+            <SelectField
+              label={t('vacancy.employer')}
+              required
+              value={data.employer_id || ''}
+              onChange={(event) => updateField('employer_id', event.target.value)}
+              helperText={t('vacancy.employerHint')}
+              className="md:col-span-2"
+              disabled={employersLoading}
+            >
+              <option value="">{employersLoading ? t('common.loading') : t('vacancy.chooseEmployer')}</option>
+              {employers.map((employer) => (
+                <option key={employer.id} value={employer.id} disabled={!employer.is_verified}>
+                  {employer.company_name || `${t('employer.company')} #${employer.id}`}
+                  {!employer.is_verified ? ` — ${t('employer.pendingVerification')}` : ''}
+                </option>
+              ))}
+            </SelectField>
+          )}
+
           <InputField
             label={t('vacancy.title')}
             required
@@ -85,6 +120,13 @@ const VacancyForm: React.FC<VacancyFormProps> = ({
             />
           )}
         </div>
+
+        {showEmployerSelect && !hasSelectableEmployer && !employersLoading && (
+          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <Building2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>{t('vacancy.noVerifiedEmployersHint')}</p>
+          </div>
+        )}
       </div>
 
       <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
@@ -123,7 +165,7 @@ const VacancyForm: React.FC<VacancyFormProps> = ({
             {t('common.cancel')}
           </Button>
         )}
-        <Button type="submit" isLoading={isSubmitting} className="w-full sm:w-auto">
+        <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || !hasSelectableEmployer} className="w-full sm:w-auto">
           {submitLabel}
         </Button>
       </div>

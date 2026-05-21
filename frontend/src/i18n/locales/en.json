@@ -311,7 +311,14 @@
     "details": "Vacancy details",
     "backToVacancies": "Back to vacancies",
     "successDelete": "Vacancy deleted",
-    "errorDelete": "Failed to delete vacancy"
+    "errorDelete": "Failed to delete vacancy",
+    "employer": "Employer",
+    "employerHint": "Choose a verified employer that will own and publish this vacancy.",
+    "chooseEmployer": "Choose an employer",
+    "noVerifiedEmployersHint": "No verified employers are available. Verify an employer first, then create a vacancy.",
+    "adminCreateHeading": "Create vacancy",
+    "adminCreateHint": "Administrators create vacancies on behalf of a selected verified employer.",
+    "adminEditHint": "Update vacancy details, publication status, and employer if needed."
   },
   "resume": {
     "title": "Upload Resume",

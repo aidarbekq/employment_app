@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Briefcase, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
@@ -16,75 +16,57 @@ const initialForm: VacancyFormData = {
   requirements: '',
   location: '',
   salary: '',
-  is_active: false,
+  is_active: true,
 };
 
-const AdminVacancyEditPage: React.FC = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+const AdminVacancyCreatePage: React.FC = () => {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [employersLoading, setEmployersLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<VacancyFormData>(initialForm);
   const [employers, setEmployers] = useState<EmployerOption[]>([]);
+  const [employersLoading, setEmployersLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchEmployers = async () => {
       try {
-        const [vacancyResponse, employersResponse] = await Promise.all([
-          api.get(`vacancies/vacancies/${id}/`),
-          api.get('employers/employers/', { params: { page_size: 100, ordering: 'company_name' } }),
-        ]);
-
-        setFormData({
-          employer_id: vacancyResponse.data.employer_id ? String(vacancyResponse.data.employer_id) : '',
-          title: vacancyResponse.data.title || '',
-          description: vacancyResponse.data.description || '',
-          requirements: vacancyResponse.data.requirements || '',
-          location: vacancyResponse.data.location || '',
-          salary: vacancyResponse.data.salary || '',
-          is_active: Boolean(vacancyResponse.data.is_active),
+        const response = await api.get('employers/employers/', {
+          params: { page_size: 100, ordering: 'company_name' },
         });
-        setEmployers(getListResults<EmployerOption>(employersResponse.data));
+        setEmployers(getListResults<EmployerOption>(response.data));
       } catch {
-        toast.error(t('vacancy.errorLoad'));
+        toast.error(t('employer.loadError'));
       } finally {
-        setLoading(false);
         setEmployersLoading(false);
       }
     };
 
-    if (id) fetchData();
-  }, [id, t]);
+    fetchEmployers();
+  }, [t]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
 
     try {
-      await api.put(`vacancies/vacancies/${id}/`, {
+      await api.post('vacancies/vacancies/', {
         ...formData,
         salary: formData.salary || null,
       });
-      toast.success(t('vacancy.successUpdate'));
+      toast.success(t('vacancy.successCreate'));
       navigate('/admin/vacancies');
     } catch {
-      toast.error(t('vacancy.errorUpdate'));
+      toast.error(t('vacancy.errorCreate'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return <p className="mt-10 text-center text-gray-500">{t('common.loading')}</p>;
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('vacancy.editHeading')}
-        subtitle={t('vacancy.adminEditHint')}
+        title={t('vacancy.adminCreateHeading')}
+        subtitle={t('vacancy.adminCreateHint')}
         icon={<Briefcase className="h-6 w-6" />}
         actions={
           <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate('/admin/vacancies')}>
@@ -97,7 +79,7 @@ const AdminVacancyEditPage: React.FC = () => {
         data={formData}
         onChange={setFormData}
         onSubmit={handleSubmit}
-        submitLabel={submitting ? t('vacancy.updating') : t('vacancy.updateVacancy')}
+        submitLabel={submitting ? t('vacancy.creating') : t('vacancy.createVacancy')}
         isSubmitting={submitting}
         showStatus
         showEmployerSelect
@@ -109,4 +91,4 @@ const AdminVacancyEditPage: React.FC = () => {
   );
 };
 
-export default AdminVacancyEditPage;
+export default AdminVacancyCreatePage;

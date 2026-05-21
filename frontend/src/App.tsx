@@ -41,6 +41,7 @@ const AdminEmployerDetailPage = lazy(() => import('./pages/admin/AdminEmployerDe
 const AdminVacanciesPage = lazy(() => import('./pages/admin/AdminVacanciesPage'));
 const AdminVacancyDetailPage = lazy(() => import('./pages/admin/AdminVacancyDetailPage'));
 const AdminVacancyEditPage = lazy(() => import('./pages/admin/AdminVacancyEditPage'));
+const AdminVacancyCreatePage = lazy(() => import('./pages/admin/AdminVacancyCreatePage'));
 const AdminPartnersPage = lazy(() => import('./pages/admin/PartnersPage'));
 const AdminGroupsPage = lazy(() => import('./pages/admin/GroupsPage'));
 const AdminUserPasswordPage = lazy(() => import('./pages/admin/AdminUserPasswordPage'));
@@ -99,6 +100,7 @@ function App() {
               <Route path="employers/:id" element={<AdminEmployerDetailPage />} />
               <Route path="users/:userId/password" element={<AdminUserPasswordPage />} />
               <Route path="vacancies" element={<AdminVacanciesPage />} />
+              <Route path="vacancies/create" element={<AdminVacancyCreatePage />} />
               <Route path="vacancies/:id" element={<AdminVacancyDetailPage />} />
               <Route path="vacancies/:id/edit" element={<AdminVacancyEditPage />} />
               <Route path="partners" element={<AdminPartnersPage />} />
