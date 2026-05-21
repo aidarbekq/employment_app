@@ -60,7 +60,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onSelect, isLoading = false, di
   };
 
   return (
-    <div ref={wrapperRef} className={`relative ${className || ''}`}>
+    <div ref={wrapperRef} className={`relative w-full sm:w-auto ${className || ''}`}>
       <Button
         type="button"
         variant="outline"
@@ -72,6 +72,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onSelect, isLoading = false, di
         isLoading={isLoading}
         aria-haspopup="menu"
         aria-expanded={isOpen}
+        className="w-full sm:w-auto"
       >
         {isLoading ? t('admin.exportingReport') : t('admin.exportReport')}
       </Button>
@@ -79,7 +80,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onSelect, isLoading = false, di
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-gray-900/12 ring-1 ring-black/5"
+          className="absolute right-0 z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-gray-900/12 ring-1 ring-black/5"
         >
           <div className="border-b border-gray-100 bg-gray-50/80 px-4 py-3">
             <p className="text-sm font-semibold text-gray-900">{t('admin.chooseExportFormat')}</p>

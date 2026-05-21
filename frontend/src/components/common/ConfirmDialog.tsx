@@ -35,18 +35,18 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm"
         onClick={onCancel}
       />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl shadow-gray-950/20">
+      <div className="relative w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl shadow-gray-950/20 sm:p-6">
         <div className="mb-4 flex items-start gap-4">
           <div className={danger ? 'rounded-2xl bg-error-50 p-3 text-error-600' : 'rounded-2xl bg-primary-50 p-3 text-primary-600'}>
             <AlertTriangle className="h-6 w-6" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-            <p className="mt-2 text-sm leading-6 text-gray-600">{description}</p>
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold leading-tight text-gray-900 break-words">{title}</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600 break-words">{description}</p>
           </div>
         </div>
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={loading} className="w-full sm:w-auto">
             {cancelText}
           </Button>
           <Button
@@ -54,6 +54,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             variant={danger ? 'danger' : 'primary'}
             isLoading={loading}
             onClick={onConfirm}
+            className="w-full sm:w-auto"
           >
             {confirmText}
           </Button>

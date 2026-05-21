@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export const fieldClass =
-  'w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-primary-400 focus:ring-4 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500';
+  'min-w-0 w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-primary-400 focus:ring-4 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500';
 
 export const textareaClass = `${fieldClass} min-h-[112px] resize-y`;
 
@@ -39,7 +39,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   ...props
 }) => (
   <label className={clsx('block space-y-1.5', className)}>
-    <span className="text-sm font-semibold text-gray-700">
+    <span className="text-sm font-semibold leading-5 text-gray-700 break-words">
       {label} {required && <span className="text-error-600">*</span>}
     </span>
     <input {...props} required={required} className={clsx(fieldClass, inputClassName)} />
@@ -68,7 +68,7 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
 
   return (
     <label className={clsx('block space-y-1.5', className)}>
-      <span className="text-sm font-semibold text-gray-700">
+      <span className="text-sm font-semibold leading-5 text-gray-700 break-words">
         {label} {required && <span className="text-error-600">*</span>}
       </span>
       <div className="relative">
@@ -102,7 +102,7 @@ export const TextareaField: React.FC<TextareaFieldProps> = ({
   ...props
 }) => (
   <label className={clsx('block space-y-1.5', className)}>
-    <span className="text-sm font-semibold text-gray-700">
+    <span className="text-sm font-semibold leading-5 text-gray-700 break-words">
       {label} {required && <span className="text-error-600">*</span>}
     </span>
     <textarea {...props} required={required} className={clsx(textareaClass, textareaClassName)} />
@@ -120,7 +120,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   ...props
 }) => (
   <label className={clsx('block space-y-1.5', className)}>
-    <span className="text-sm font-semibold text-gray-700">
+    <span className="text-sm font-semibold leading-5 text-gray-700 break-words">
       {label} {required && <span className="text-error-600">*</span>}
     </span>
     <select {...props} required={required} className={clsx(fieldClass, selectClassName)}>
@@ -148,7 +148,7 @@ export const SwitchField: React.FC<SwitchFieldProps> = ({ label, description, ch
     )}
   >
     <span>
-      <span className="block text-sm font-semibold text-gray-800">{label}</span>
+      <span className="block text-sm font-semibold leading-5 text-gray-800 break-words">{label}</span>
       {description && <span className="mt-1 block text-xs leading-5 text-gray-500">{description}</span>}
     </span>
     <span

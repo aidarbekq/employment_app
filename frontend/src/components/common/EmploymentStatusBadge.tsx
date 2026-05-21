@@ -41,13 +41,13 @@ const EmploymentStatusBadge: React.FC<EmploymentStatusBadgeProps> = ({ status, l
   return (
     <span
       className={clsx(
-        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ring-1 ring-white/50',
+        'inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ring-1 ring-white/50',
         config.className,
         className
       )}
     >
       {config.icon}
-      {label}
+      <span className="min-w-0 break-words leading-5">{label}</span>
     </span>
   );
 };

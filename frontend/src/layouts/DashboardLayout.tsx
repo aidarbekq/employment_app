@@ -36,14 +36,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role }) => {
 
   return (
     <LanguageProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         {/* Sidebar: mobile responsive */}
         <Sidebar role={role} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader setSidebarOpen={setIsSidebarOpen} />
-          <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-7xl">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-6 lg:p-8">
+            <div className="mx-auto w-full max-w-7xl min-w-0">
               <Outlet />
             </div>
           </main>

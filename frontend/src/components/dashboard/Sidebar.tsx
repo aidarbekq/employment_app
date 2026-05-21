@@ -34,12 +34,12 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, setIsOpen }) => {
       to={to}
       onClick={() => setIsOpen(false)}
       className={clsx(
-        'flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors',
+        'flex min-w-0 items-center gap-3 px-4 py-3 rounded-lg transition-colors',
         isActive(to) ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'
       )}
     >
       {icon}
-      <span>{label}</span>
+      <span className="min-w-0 leading-5 break-words">{label}</span>
     </Link>
   );
 
@@ -90,9 +90,9 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, setIsOpen }) => {
         )}
       >
         <div className="p-4 border-b border-gray-200">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex min-w-0 items-start gap-2">
             <GraduationCap className="h-8 w-8 text-primary-600" />
-            <span className="text-lg font-semibold text-primary-700">{t('app.name')}</span>
+            <span className="min-w-0 text-lg font-semibold leading-6 text-primary-700 break-words">{t('app.name')}</span>
           </Link>
         </div>
 

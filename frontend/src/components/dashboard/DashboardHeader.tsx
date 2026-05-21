@@ -25,16 +25,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ setSidebarOpen }) => 
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div className="h-16 px-4 sm:px-6 flex items-center justify-between">
+      <div className="min-h-16 px-4 py-3 sm:px-6 flex items-center justify-between gap-3">
         {/* Burger + Title */}
-        <div className="flex items-center space-x-3">
+        <div className="flex min-w-0 items-center gap-3">
           <button
-            className="sm:hidden text-gray-600 hover:text-gray-800"
+            className="shrink-0 sm:hidden text-gray-600 hover:text-gray-800"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="h-6 w-6" />
           </button>
-          <h1 className="text-xl font-semibold text-gray-800">
+          <h1 className="min-w-0 text-lg font-semibold leading-tight text-gray-800 break-words sm:text-xl">
             {user?.role === 'ADMIN' && t('admin.dashboard')}
             {user?.role === 'EMPLOYER' && t('employer.dashboard')}
             {user?.role === 'ALUMNI' && t('graduate.profile')}
@@ -42,7 +42,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ setSidebarOpen }) => 
         </div>
 
         {/* Language selector only */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={toggleLanguageMenu}
             className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 transition-colors flex items-center"

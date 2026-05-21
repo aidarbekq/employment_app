@@ -8,7 +8,7 @@ interface CardProps {
 
 export const Card: React.FC<CardProps> = ({ children, className }) => {
   return (
-    <div className={clsx('rounded-2xl border border-gray-200 bg-white shadow-sm', className)}>
+    <div className={clsx('min-w-0 rounded-2xl border border-gray-200 bg-white shadow-sm', className)}>
       {children}
     </div>
   );
@@ -21,7 +21,7 @@ interface CardHeaderProps {
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className }) => {
   return (
-    <div className={clsx('border-b border-gray-100 px-5 py-4 sm:px-6', className)}>
+    <div className={clsx('min-w-0 border-b border-gray-100 px-4 py-4 sm:px-6', className)}>
       {children}
     </div>
   );
@@ -33,7 +33,7 @@ interface CardTitleProps {
 }
 
 export const CardTitle: React.FC<CardTitleProps> = ({ children, className }) => {
-  return <h3 className={clsx('text-lg font-semibold text-gray-900', className)}>{children}</h3>;
+  return <h3 className={clsx('min-w-0 text-lg font-semibold leading-tight text-gray-900 break-words', className)}>{children}</h3>;
 };
 
 interface CardContentProps {
@@ -42,7 +42,7 @@ interface CardContentProps {
 }
 
 export const CardContent: React.FC<CardContentProps> = ({ children, className }) => {
-  return <div className={clsx('px-5 py-4 sm:px-6', className)}>{children}</div>;
+  return <div className={clsx('min-w-0 px-4 py-4 sm:px-6', className)}>{children}</div>;
 };
 
 interface CardFooterProps {
@@ -52,6 +52,6 @@ interface CardFooterProps {
 
 export const CardFooter: React.FC<CardFooterProps> = ({ children, className }) => {
   return (
-    <div className={clsx('border-t border-gray-100 px-5 py-4 sm:px-6', className)}>{children}</div>
+    <div className={clsx('min-w-0 border-t border-gray-100 px-4 py-4 sm:px-6', className)}>{children}</div>
   );
 };
