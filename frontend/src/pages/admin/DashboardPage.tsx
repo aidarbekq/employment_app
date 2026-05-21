@@ -282,14 +282,14 @@ const AdminDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 pb-10">
+    <div className="space-y-5 px-0 pb-10 sm:space-y-6 sm:px-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">{t("admin.dashboard")}</h1>
           <p className="text-gray-500 text-sm mt-1">{t("admin.overview")}</p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
           <Button variant="outline" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={fetchStats}>
             {t("admin.refresh")}
           </Button>
@@ -360,7 +360,7 @@ const AdminDashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
         {metricCards.map((metric) => (
           <Card key={metric.title} className="rounded-2xl border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-2">{metric.title}</p>
@@ -379,33 +379,73 @@ const AdminDashboardPage: React.FC = () => {
           <CardTitle>{t("admin.statusPieChart")}</CardTitle>
           <p className="text-sm text-gray-500 mt-1">{t("admin.statusPieChartHint")}</p>
         </CardHeader>
-        <CardContent>
-          <div className="h-[440px]">
-            {pieData.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 12, right: 24, bottom: 12, left: 24 }}>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius="58%"
-                    outerRadius="82%"
-                    paddingAngle={3}
-                    labelLine={false}
-                    label
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={48} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">{t("common.noResults")}</div>
-            )}
-          </div>
+        <CardContent className="chart-safe">
+          {pieData.length ? (
+            <div className="space-y-5">
+              <div className="block sm:hidden">
+                <div className="h-[260px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart margin={{ top: 6, right: 6, bottom: 6, left: 6 }}>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius="55%"
+                        outerRadius="82%"
+                        paddingAngle={3}
+                        labelLine={false}
+                        label={false}
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
+                  {pieData.map((item, index) => (
+                    <div key={item.name} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                      <span className="flex min-w-0 items-center gap-2 text-gray-700">
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length] }}
+                        />
+                        <span className="min-w-0 break-words leading-5">{item.name}</span>
+                      </span>
+                      <span className="shrink-0 font-semibold text-gray-900">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden h-[440px] sm:block">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 12, right: 24, bottom: 12, left: 24 }}>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius="58%"
+                      outerRadius="82%"
+                      paddingAngle={3}
+                      labelLine={false}
+                      label
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" height={48} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-[220px] items-center justify-center text-gray-500">{t("common.noResults")}</div>
+          )}
         </CardContent>
       </Card>
 
@@ -415,8 +455,8 @@ const AdminDashboardPage: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">{t("admin.tableSubtitle")}</p>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm text-gray-700">
+          <div className="w-full overflow-x-auto">
+            <table className="min-w-[980px] text-sm text-gray-700">
               <thead className="bg-gray-50 border-y border-gray-100 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th className="sticky left-0 z-10 bg-gray-50 px-6 py-4 text-left">{t("admin.year")}</th>
@@ -462,11 +502,11 @@ const AdminDashboardPage: React.FC = () => {
           <CardTitle>{t("admin.employmentTrend")}</CardTitle>
           <p className="text-sm text-gray-500 mt-1">{t("admin.employmentTrendHint")}</p>
         </CardHeader>
-        <CardContent>
-          <div className="h-[440px]">
+        <CardContent className="chart-safe">
+          <div className="h-[340px] sm:h-[440px]">
             {chartData.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 24, right: 20, left: 0, bottom: 8 }}>
+                <ComposedChart data={chartData} margin={{ top: 20, right: 12, left: -12, bottom: 12 }}>
                   <defs>
                     <linearGradient id="employmentRateGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#2563EB" stopOpacity={0.22} />
@@ -490,7 +530,7 @@ const AdminDashboardPage: React.FC = () => {
                     }}
                     labelFormatter={(label) => `${t("admin.year")}: ${label}`}
                   />
-                  <Legend verticalAlign="bottom" height={36} />
+                  <Legend verticalAlign="bottom" height={48} wrapperStyle={{ fontSize: 12, lineHeight: "18px" }} />
                   <Bar yAxisId="left" dataKey="surveyed" name={t("admin.surveyed")} fill="#DBEAFE" radius={[8, 8, 0, 0]} barSize={34} />
                   <Bar yAxisId="left" dataKey="employed" name={t("admin.employed")} fill="#2563EB" radius={[8, 8, 0, 0]} barSize={26} />
                   <Area
