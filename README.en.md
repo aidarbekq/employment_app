@@ -170,19 +170,21 @@ npm run build
 
 The project is adapted for the Department of Information Systems and Technologies named after Academician A. Zhainakov. The system now includes:
 
-- academic groups with study form, direction, profile, degree level, and graduate counts;
+- academic groups with study form, direction, profile, and degree level;
 - an extended graduate survey: employment status, workplace, position, continuing education, useful subjects, and self-study topics;
 - graduate creation from the admin panel;
 - editable homepage partners from the admin panel;
 - a pie chart for employment status analytics;
 - a PDF report with a detailed graduate list and percentage summary.
 
-## Employment PDF export
+## Employment report export
 
-An administrator can download the report from the analytics page or the graduates list. Endpoint:
+An administrator can download the report from the analytics page or the graduates list. PDF, DOCX, and XLSX are supported:
 
 ```text
 GET /api/analytics/employment-report.pdf
+GET /api/analytics/employment-report.docx
+GET /api/analytics/employment-report.xlsx
 ```
 
 Supported filters:
@@ -193,6 +195,8 @@ academic_group
 study_form
 degree_level
 employment_status
+direction_code
+search
 ```
 
 If a group filter is selected, the PDF is generated only for that group. If no filter is selected, all groups and graduation years are included.
@@ -202,11 +206,32 @@ If a group filter is selected, the PDF is generated only for that group. If no f
 Copy `.env.example` to `.env`:
 
 ```dotenv
-SECRET_KEY=change-me-in-production
+SECRET_KEY=change-me-to-a-generated-64-character-random-secret-key-before-deploy
 DEBUG=False
+ENABLE_API_DOCS=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
 CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
+
+SECURE_SSL_REDIRECT=False
+SECURE_HSTS_SECONDS=0
+SECURE_HSTS_INCLUDE_SUBDOMAINS=False
+SECURE_HSTS_PRELOAD=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+SECURE_REFERRER_POLICY=same-origin
+
+API_PAGE_SIZE=10
+DRF_ANON_THROTTLE_RATE=100/hour
+DRF_USER_THROTTLE_RATE=1000/hour
+DRF_AUTH_THROTTLE_RATE=10/minute
+DRF_PASSWORD_THROTTLE_RATE=5/minute
+DRF_REPORT_THROTTLE_RATE=20/hour
+JWT_ACCESS_TOKEN_MINUTES=15
+JWT_REFRESH_TOKEN_DAYS=7
+
+GUNICORN_WORKERS=3
+GUNICORN_TIMEOUT=60
 
 DB_NAME=employment_db
 DB_USER=employment_user
@@ -239,6 +264,8 @@ If PostgreSQL is unavailable, the endpoint returns HTTP `503`.
 
 - replace demo passwords and `SECRET_KEY`;
 - move secrets to a protected secrets manager;
-- configure HTTPS and production CORS/CSRF origins;
+- configure HTTPS, production CORS/CSRF origins, and enable `SECURE_SSL_REDIRECT=True`, `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`;
+- enable HSTS (`SECURE_HSTS_SECONDS`) only after HTTPS is stable on the production domain;
+- disable public API documentation with `ENABLE_API_DOCS=False` when it is not needed;
 - add CI for `python manage.py check`, `npm run lint`, `npx tsc -b`, `npm audit`, and `npm run build`;
 - keep dependencies updated and check bundle size after adding large pages.

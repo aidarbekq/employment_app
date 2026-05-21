@@ -28,9 +28,8 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - ./backend/media:/app/media
-      - ./backend/staticfiles:/app/staticfiles
+      - media_data:/app/media
+      - staticfiles_data:/app/staticfiles
     healthcheck:
       test:
         [
@@ -53,9 +52,11 @@ services:
       backend:
         condition: service_healthy
     volumes:
-      - ./backend/media:/usr/share/nginx/html/media
-      - ./backend/staticfiles:/usr/share/nginx/html/staticfiles
+      - media_data:/usr/share/nginx/html/media:ro
+      - staticfiles_data:/usr/share/nginx/html/staticfiles:ro
     restart: always
 
 volumes:
   postgres_data:
+  media_data:
+  staticfiles_data:

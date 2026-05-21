@@ -170,19 +170,21 @@ npm run build
 
 Проект адаптирован под кафедру «Информационные системы и технологии имени академика А. Жайнакова». В системе появились:
 
-- академические группы с формой обучения, направлением, профилем, уровнем обучения и количеством выпускников;
+- академические группы с формой обучения, направлением, профилем и уровнем обучения;
 - расширенная анкета выпускника: статус трудоустройства, место работы, должность, продолжение обучения, полезные дисциплины и темы самостоятельного изучения;
 - создание выпускников из админ-панели;
 - управление партнерами главной страницы из админ-панели;
 - аналитическая круговая диаграмма по статусам трудоустройства;
 - PDF-отчет с пофамильным списком и процентной сводкой.
 
-## PDF-экспорт трудоустройства
+## Экспорт отчетов по трудоустройству
 
-Администратор может скачать отчет из раздела аналитики или списка выпускников. Endpoint:
+Администратор может скачать отчет из раздела аналитики или списка выпускников. Поддерживаются PDF, DOCX и XLSX:
 
 ```text
 GET /api/analytics/employment-report.pdf
+GET /api/analytics/employment-report.docx
+GET /api/analytics/employment-report.xlsx
 ```
 
 Поддерживаются фильтры:
@@ -193,6 +195,8 @@ academic_group
 study_form
 degree_level
 employment_status
+direction_code
+search
 ```
 
 Если выбран фильтр по группе, PDF формируется только по этой группе. Если фильтр не выбран, в отчет попадают все группы и годы выпуска.
@@ -202,11 +206,32 @@ employment_status
 Файл `.env.example` можно скопировать в `.env`:
 
 ```dotenv
-SECRET_KEY=change-me-in-production
+SECRET_KEY=change-me-to-a-generated-64-character-random-secret-key-before-deploy
 DEBUG=False
+ENABLE_API_DOCS=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
 CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://localhost:5173
+
+SECURE_SSL_REDIRECT=False
+SECURE_HSTS_SECONDS=0
+SECURE_HSTS_INCLUDE_SUBDOMAINS=False
+SECURE_HSTS_PRELOAD=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+SECURE_REFERRER_POLICY=same-origin
+
+API_PAGE_SIZE=10
+DRF_ANON_THROTTLE_RATE=100/hour
+DRF_USER_THROTTLE_RATE=1000/hour
+DRF_AUTH_THROTTLE_RATE=10/minute
+DRF_PASSWORD_THROTTLE_RATE=5/minute
+DRF_REPORT_THROTTLE_RATE=20/hour
+JWT_ACCESS_TOKEN_MINUTES=15
+JWT_REFRESH_TOKEN_DAYS=7
+
+GUNICORN_WORKERS=3
+GUNICORN_TIMEOUT=60
 
 DB_NAME=employment_db
 DB_USER=employment_user
@@ -239,6 +264,8 @@ GET /api/health/
 
 - заменить демо-пароли и `SECRET_KEY`;
 - вынести секреты в защищённое хранилище или secrets manager;
-- настроить HTTPS и production CORS/CSRF origins;
+- настроить HTTPS, production CORS/CSRF origins и включить `SECURE_SSL_REDIRECT=True`, `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`;
+- после HTTPS включить HSTS (`SECURE_HSTS_SECONDS`) только на домене, где точно работает HTTPS;
+- при необходимости выключить публичную документацию API через `ENABLE_API_DOCS=False`;
 - добавить CI pipeline для `python manage.py check`, `npm run lint`, `npx tsc -b`, `npm audit`, `npm run build`;
 - регулярно обновлять зависимости и проверять bundle size после новых крупных страниц.

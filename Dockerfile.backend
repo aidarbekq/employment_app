@@ -2,7 +2,8 @@
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
@@ -10,22 +11,25 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p media staticfiles \
-    && chown -R root:root media staticfiles
+RUN groupadd --gid 1000 app \
+    && useradd --uid 1000 --gid app --create-home --shell /usr/sbin/nologin app
 
-
-# Копируем только requirements.txt и ставим все зависимости + gunicorn
 COPY backend/requirements.txt .
-# Добавляем gunicorn в установку
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-# Копируем весь код
-COPY backend/ .
+COPY --chown=app:app backend/ .
+RUN mkdir -p media staticfiles \
+    && chown -R app:app /app/media /app/staticfiles
 
-# При старте: миграции, сбор статики и запуск gunicorn
+USER app
+
 CMD ["sh", "-c", "\
     python manage.py migrate && \
     python manage.py collectstatic --noinput && \
-    gunicorn employment_system.wsgi:application --bind 0.0.0.0:8000 \
+    gunicorn employment_system.wsgi:application \
+      --bind 0.0.0.0:8000 \
+      --workers ${GUNICORN_WORKERS:-3} \
+      --timeout ${GUNICORN_TIMEOUT:-60} \
+      --access-logfile - \
+      --error-logfile -\
 "]
-
