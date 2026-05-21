@@ -1,9 +1,15 @@
+from pathlib import Path
+from uuid import uuid4
+
 from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
 
 
 def partner_logo_upload_path(instance, filename):
-    return f"partners/{instance.slug or instance.name}/{filename}"
+    extension = Path(filename).suffix.lower()
+    partner_slug = slugify(instance.slug or instance.name) or "partner"
+    return f"partners/{partner_slug}/{uuid4().hex}{extension}"
 
 
 class Employer(models.Model):

@@ -9,12 +9,12 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-from dotenv import load_dotenv
-from pathlib import Path
 import os
 from datetime import timedelta
+from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -34,6 +34,10 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+def env_str(name: str, default: str = "") -> str:
+    return os.getenv(name, default).strip()
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -47,10 +51,13 @@ if not SECRET_KEY:
     raise ImproperlyConfigured("SECRET_KEY must be set in the environment.")
 
 DEBUG = env_bool("DEBUG", False)
+DJANGO_ENVIRONMENT = env_str("DJANGO_ENVIRONMENT", "development").lower()
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 
 # Application definition
+
+MEDIA_STORAGE_BACKEND = env_str("MEDIA_STORAGE_BACKEND", "local").lower()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -71,6 +78,9 @@ INSTALLED_APPS = [
     "vacancies",
     "analytics",
 ]
+
+if MEDIA_STORAGE_BACKEND == "s3":
+    INSTALLED_APPS.append("storages")
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -223,10 +233,94 @@ AUTH_USER_MODEL = "users.User"
 
 LOCALE_PATHS = [BASE_DIR / "locale"]
 
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+STATIC_URL = env_str("STATIC_URL", "/static/")
+STATIC_ROOT = BASE_DIR / env_str("STATIC_ROOT", "staticfiles")
+MEDIA_URL = env_str("MEDIA_URL", "/media/")
+MEDIA_ROOT = BASE_DIR / env_str("MEDIA_ROOT", "media")
+
+RESUME_MAX_UPLOAD_SIZE = env_int("RESUME_MAX_UPLOAD_SIZE", 5 * 1024 * 1024)
+PARTNER_LOGO_MAX_UPLOAD_SIZE = env_int("PARTNER_LOGO_MAX_UPLOAD_SIZE", 2 * 1024 * 1024)
+RESUME_ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
+PARTNER_LOGO_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+PARTNER_LOGO_ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+if MEDIA_STORAGE_BACKEND == "s3":
+    AWS_STORAGE_BUCKET_NAME = env_str("AWS_STORAGE_BUCKET_NAME")
+    if not AWS_STORAGE_BUCKET_NAME:
+        raise ImproperlyConfigured("AWS_STORAGE_BUCKET_NAME must be set when MEDIA_STORAGE_BACKEND=s3.")
+
+    AWS_S3_REGION_NAME = env_str("AWS_S3_REGION_NAME", "auto")
+    AWS_S3_ENDPOINT_URL = env_str("AWS_S3_ENDPOINT_URL", "") or None
+    AWS_S3_CUSTOM_DOMAIN = env_str("AWS_S3_CUSTOM_DOMAIN", "")
+    AWS_QUERYSTRING_AUTH = env_bool("AWS_QUERYSTRING_AUTH", True)
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None
+
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "region_name": AWS_S3_REGION_NAME,
+            "endpoint_url": AWS_S3_ENDPOINT_URL,
+            "custom_domain": AWS_S3_CUSTOM_DOMAIN or None,
+            "querystring_auth": AWS_QUERYSTRING_AUTH,
+            "file_overwrite": AWS_S3_FILE_OVERWRITE,
+            "default_acl": AWS_DEFAULT_ACL,
+        },
+    }
+
+def validate_production_settings() -> None:
+    if DJANGO_ENVIRONMENT != "production":
+        return
+    if DEBUG:
+        raise ImproperlyConfigured("DEBUG must be False when DJANGO_ENVIRONMENT=production.")
+    if SECRET_KEY.startswith("change-me") or len(SECRET_KEY) < 50:
+        raise ImproperlyConfigured("Set a strong SECRET_KEY before production deployment.")
+    if not ALLOWED_HOSTS or set(ALLOWED_HOSTS) & {"*", "localhost", "127.0.0.1"}:
+        raise ImproperlyConfigured("Set production ALLOWED_HOSTS to real domains only.")
+    if not SECURE_SSL_REDIRECT:
+        raise ImproperlyConfigured("Enable SECURE_SSL_REDIRECT in production.")
+    if not SESSION_COOKIE_SECURE or not CSRF_COOKIE_SECURE:
+        raise ImproperlyConfigured("Secure cookies must be enabled in production.")
+    if SECURE_HSTS_SECONDS < 31536000:
+        raise ImproperlyConfigured("Set SECURE_HSTS_SECONDS to at least 31536000 in production.")
+
+
+validate_production_settings()
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(levelname)s %(asctime)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": env_str("DJANGO_LOG_LEVEL", "INFO"),
+    },
+}
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -151,13 +151,24 @@ class AlumniProfileSerializer(serializers.ModelSerializer):
     def validate_resume(self, value):
         if value is None:
             return value
-        allowed_extensions = {".pdf", ".doc", ".docx"}
+
         extension = Path(value.name).suffix.lower()
-        if extension not in allowed_extensions:
+        if extension not in settings.RESUME_ALLOWED_EXTENSIONS:
             raise serializers.ValidationError("Only PDF, DOC, and DOCX resume files are allowed.")
-        max_size = getattr(settings, "FILE_UPLOAD_MAX_MEMORY_SIZE", 5 * 1024 * 1024)
+
+        max_size = settings.RESUME_MAX_UPLOAD_SIZE
         if value.size > max_size:
             raise serializers.ValidationError(f"Resume file must be smaller than {max_size // (1024 * 1024)} MB.")
+
+        allowed_content_types = {
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        content_type = getattr(value, "content_type", "")
+        if content_type and content_type not in allowed_content_types:
+            raise serializers.ValidationError("Unsupported resume file type.")
+
         return value
 
 

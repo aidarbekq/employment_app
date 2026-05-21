@@ -1,5 +1,9 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
 from users.serializers import UserSerializer
@@ -100,6 +104,33 @@ class PartnerSerializer(serializers.ModelSerializer):
             "description": {"required": False, "allow_blank": True},
             "website": {"required": False, "allow_blank": True},
         }
+
+
+    def validate_logo(self, value):
+        if value is None:
+            return value
+
+        extension = Path(value.name).suffix.lower()
+        if extension not in settings.PARTNER_LOGO_ALLOWED_EXTENSIONS:
+            raise serializers.ValidationError("Only JPG, PNG, and WEBP logo images are allowed.")
+
+        if value.size > settings.PARTNER_LOGO_MAX_UPLOAD_SIZE:
+            max_mb = settings.PARTNER_LOGO_MAX_UPLOAD_SIZE // (1024 * 1024)
+            raise serializers.ValidationError(f"Logo file must be smaller than {max_mb} MB.")
+
+        content_type = getattr(value, "content_type", "")
+        if content_type and content_type not in settings.PARTNER_LOGO_ALLOWED_CONTENT_TYPES:
+            raise serializers.ValidationError("Unsupported logo image type.")
+
+        try:
+            image = Image.open(value)
+            image.verify()
+        except (UnidentifiedImageError, OSError) as exc:
+            raise serializers.ValidationError("Uploaded logo must be a valid image file.") from exc
+        finally:
+            value.seek(0)
+
+        return value
 
     def get_logo_url(self, obj) -> str | None:
         if not obj.logo:

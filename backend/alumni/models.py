@@ -1,9 +1,15 @@
+from pathlib import Path
+from uuid import uuid4
+
 from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
 
 
 def resume_upload_path(instance, filename):
-    return f"resumes/{instance.user.username}/{filename}"
+    extension = Path(filename).suffix.lower()
+    username = slugify(instance.user.username) or f"user-{instance.user_id}"
+    return f"resumes/{username}/{uuid4().hex}{extension}"
 
 
 class AcademicGroup(models.Model):
