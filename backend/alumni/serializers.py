@@ -1,5 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from pathlib import Path
+
+from django.conf import settings
+from django.urls import reverse
 from rest_framework import serializers
 
 from employers.models import Employer
@@ -31,6 +35,7 @@ class AcademicGroupSerializer(serializers.ModelSerializer):
 
 
 class GetAlumniProfileSerializer(serializers.ModelSerializer):
+    resume = serializers.SerializerMethodField()
     user = UserSerializer(read_only=True)
     academic_group = AcademicGroupSerializer(read_only=True)
     academic_group_id = serializers.PrimaryKeyRelatedField(
@@ -46,6 +51,13 @@ class GetAlumniProfileSerializer(serializers.ModelSerializer):
     employment_status_display = serializers.CharField(source="get_employment_status_display", read_only=True)
     study_form_display = serializers.CharField(source="get_study_form_display", read_only=True)
     degree_level_display = serializers.CharField(source="get_degree_level_display", read_only=True)
+
+    def get_resume(self, obj) -> str | None:
+        if not obj.resume:
+            return None
+        request = self.context.get("request")
+        url = reverse("alumni-profile-resume", kwargs={"pk": obj.pk})
+        return request.build_absolute_uri(url) if request else url
 
     class Meta:
         model = AlumniProfile
@@ -135,6 +147,20 @@ class AlumniProfileSerializer(serializers.ModelSerializer):
         }
 
 
+
+    def validate_resume(self, value):
+        if value is None:
+            return value
+        allowed_extensions = {".pdf", ".doc", ".docx"}
+        extension = Path(value.name).suffix.lower()
+        if extension not in allowed_extensions:
+            raise serializers.ValidationError("Only PDF, DOC, and DOCX resume files are allowed.")
+        max_size = getattr(settings, "FILE_UPLOAD_MAX_MEMORY_SIZE", 5 * 1024 * 1024)
+        if value.size > max_size:
+            raise serializers.ValidationError(f"Resume file must be smaller than {max_size // (1024 * 1024)} MB.")
+        return value
+
+
 class AdminAlumniCreateSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()
@@ -172,6 +198,12 @@ class AdminAlumniCreateSerializer(serializers.Serializer):
     continuing_education_place = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     useful_subjects = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     self_study_topics = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate_email(self, value):
+        normalized = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return normalized
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
