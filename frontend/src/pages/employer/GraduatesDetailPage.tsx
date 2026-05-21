@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, BadgeCheck, Briefcase, Calendar, FileText, GraduationCap, Mail, User, XCircle } from 'lucide-react';
+import { ArrowLeft, Briefcase, Calendar, FileText, GraduationCap, Mail, User } from 'lucide-react';
 import api from '@/services/api';
 import Button from '@/components/common/Button';
 import DetailItem from '@/components/common/DetailItem';
+import EmploymentStatusBadge from '@/components/common/EmploymentStatusBadge';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent } from '@/components/common/Card';
 
@@ -31,6 +32,7 @@ interface GraduateDetail {
   workplace?: string | null;
   employer: number | null;
   is_employed: boolean;
+  employment_status?: string;
   employment_status_display?: string;
   continuing_education_place?: string | null;
   useful_subjects?: string | null;
@@ -79,10 +81,7 @@ const EmployerGraduateDetailPage: React.FC = () => {
               <p className="text-sm text-primary-100">{t('graduate.employmentStatus')}</p>
               <h2 className="mt-1 text-2xl font-bold">{statusText}</h2>
             </div>
-            <span className={graduate.is_employed ? 'inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-sm font-semibold text-white ring-1 ring-white/20' : 'inline-flex items-center rounded-full bg-warning-300/20 px-3 py-1 text-sm font-semibold text-warning-50 ring-1 ring-warning-200/30'}>
-              {graduate.is_employed ? <BadgeCheck className="mr-1.5 h-4 w-4" /> : <XCircle className="mr-1.5 h-4 w-4" />}
-              {statusText}
-            </span>
+            <EmploymentStatusBadge status={graduate.employment_status} label={statusText} className="bg-white/95" />
           </div>
         </div>
         <CardContent className="space-y-6 p-5 sm:p-6">

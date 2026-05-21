@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Button from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { Card, CardContent } from "@/components/common/Card";
+import EmploymentStatusBadge from "@/components/common/EmploymentStatusBadge";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Briefcase, CheckCircle, Edit3, GraduationCap, KeyRound, Mail, UserCircle } from "lucide-react";
 
@@ -93,14 +94,6 @@ const emptyForm: ProfileFormData = {
   first_name: "",
   last_name: "",
   email: "",
-};
-
-const statusBadgeClass = (status: string) => {
-  if (status === "EMPLOYED_SPECIALTY") return "bg-green-50 text-green-700 border-green-100";
-  if (status === "EMPLOYED_NOT_SPECIALTY" || status === "SELF_EMPLOYED") return "bg-blue-50 text-blue-700 border-blue-100";
-  if (status === "CONTINUING_EDUCATION") return "bg-indigo-50 text-indigo-700 border-indigo-100";
-  if (status === "LOST_CONTACT") return "bg-gray-100 text-gray-600 border-gray-200";
-  return "bg-yellow-50 text-yellow-700 border-yellow-100";
 };
 
 const inputClass = "rounded-xl border-gray-200 focus:ring-primary-500 focus:border-primary-500";
@@ -279,9 +272,7 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold ${statusBadgeClass(profile.employment_status)}`}>
-                {statusLabel}
-              </span>
+              <EmploymentStatusBadge status={profile.employment_status} label={statusLabel} className="px-4 py-2" />
               <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
                 {formData.is_surveyed ? t("graduate.isSurveyed") : t("graduate.notSurveyed")}
               </span>
