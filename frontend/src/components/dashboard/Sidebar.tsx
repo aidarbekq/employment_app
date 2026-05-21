@@ -67,11 +67,11 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, setIsOpen }) => {
         return (
           <>
             <NavLink to="/admin/dashboard" icon={<BarChart className="h-5 w-5" />} label={t('admin.dashboard')} />
+            <NavLink to="/admin/groups" icon={<Layers className="h-5 w-5" />} label={t('admin.groupsManagement')} />
             <NavLink to="/admin/graduates" icon={<GraduationCap className="h-5 w-5" />} label={t('admin.graduatesManagement')} />
             <NavLink to="/admin/employers" icon={<Building className="h-5 w-5" />} label={t('admin.employersManagement')} />
             <NavLink to="/admin/vacancies" icon={<Briefcase className="h-5 w-5" />} label={t('admin.vacanciesManagement')} />
             <NavLink to="/admin/partners" icon={<Handshake className="h-5 w-5" />} label={t('admin.partnersManagement')} />
-            <NavLink to="/admin/groups" icon={<Layers className="h-5 w-5" />} label={t('admin.groupsManagement')} />
           </>
         );
       default:
