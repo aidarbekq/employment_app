@@ -17,6 +17,8 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -91,6 +93,7 @@ def _apply_profile_filters(qs: QuerySet[AlumniProfile], request) -> QuerySet[Alu
     return qs
 
 
+@extend_schema(responses={200: dict})
 class EmploymentStatsView(APIView):
     permission_classes = (permissions.AllowAny,)
 
@@ -156,8 +159,10 @@ class EmploymentStatsView(APIView):
         return Response(result)
 
 
+@extend_schema(responses={200: OpenApiTypes.BINARY})
 class EmploymentReportExportView(APIView):
     permission_classes = (IsAdminUserRole,)
+    throttle_scope = "reports"
 
     def get(self, request, export_format: str = "pdf"):
         export_format = export_format.lower().strip()

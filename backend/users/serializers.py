@@ -20,6 +20,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "email": {"required": True},
         }
 
+    def validate_email(self, value):
+        normalized = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return normalized
+
+    def validate_role(self, value):
+        if value not in {User.Roles.ALUMNI, User.Roles.EMPLOYER}:
+            raise serializers.ValidationError("Public registration supports only alumni and employer accounts.")
+        return value
+
     def validate(self, data):
         if data["password"] != data["password2"]:
             raise serializers.ValidationError({"password": "Password fields didn’t match."})
