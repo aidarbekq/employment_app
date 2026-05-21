@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import Button from '@/components/common/Button';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
-import { InputField, TextareaField } from '@/components/common/FormControls';
+import { InputField, PasswordField, TextareaField } from '@/components/common/FormControls';
 import api from '@/services/api';
 
 type EmployerCreateForm = {
@@ -122,8 +122,8 @@ const AdminEmployerCreatePage: React.FC = () => {
                 <InputField label={t('auth.lastName')} value={form.last_name} onChange={(event) => updateForm('last_name', event.target.value)} />
                 <InputField label={t('auth.username')} required value={form.username} onChange={(event) => updateForm('username', event.target.value)} />
                 <InputField label={t('auth.email')} required type="email" value={form.email} onChange={(event) => updateForm('email', event.target.value)} />
-                <InputField label={t('security.newPassword')} required type="password" value={form.password} onChange={(event) => updateForm('password', event.target.value)} />
-                <InputField label={t('security.confirmNewPassword')} required type="password" value={form.password2} onChange={(event) => updateForm('password2', event.target.value)} />
+                <PasswordField label={t('security.newPassword')} required value={form.password} onChange={(event) => updateForm('password', event.target.value)} />
+                <PasswordField label={t('security.confirmNewPassword')} required value={form.password2} onChange={(event) => updateForm('password2', event.target.value)} />
               </CardContent>
             </Card>
           </div>

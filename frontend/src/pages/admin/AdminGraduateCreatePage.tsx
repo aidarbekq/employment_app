@@ -8,7 +8,7 @@ import { getListResults } from '@/utils/pagination';
 import Button from '@/components/common/Button';
 import PageHeader from '@/components/common/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/common/Card';
-import { InputField, SelectField, SwitchField, TextareaField } from '@/components/common/FormControls';
+import { InputField, PasswordField, SelectField, SwitchField, TextareaField } from '@/components/common/FormControls';
 
 interface AcademicGroup {
   id: number;
@@ -34,6 +34,7 @@ interface GraduateCreateForm {
   first_name: string;
   last_name: string;
   password: string;
+  password2: string;
   academic_group_id: string;
   graduation_year: string;
   specialty: string;
@@ -55,7 +56,8 @@ const initialForm: GraduateCreateForm = {
   email: '',
   first_name: '',
   last_name: '',
-  password: 'DemoPass123!',
+  password: '',
+  password2: '',
   academic_group_id: '',
   graduation_year: '',
   specialty: '',
@@ -113,13 +115,19 @@ const AdminGraduateCreatePage: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (form.password !== form.password2) {
+      toast.error(t('auth.passwordMismatch'));
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
         ...form,
         academic_group_id: form.academic_group_id ? Number(form.academic_group_id) : null,
         graduation_year: form.graduation_year ? Number(form.graduation_year) : null,
-        password: form.password || undefined,
+        password: form.password,
+        password2: form.password2,
         study_form: form.study_form || null,
         workplace: form.workplace || null,
         position: form.position || null,
@@ -163,7 +171,18 @@ const AdminGraduateCreatePage: React.FC = () => {
                 <InputField label={t('auth.lastName')} required value={form.last_name} onChange={(event) => updateForm('last_name', event.target.value)} />
                 <InputField label={t('auth.username')} required value={form.username} onChange={(event) => updateForm('username', event.target.value)} />
                 <InputField label={t('auth.email')} required type="email" value={form.email} onChange={(event) => updateForm('email', event.target.value)} />
-                <InputField label={t('auth.password')} required value={form.password} onChange={(event) => updateForm('password', event.target.value)} className="md:col-span-2" />
+                <PasswordField
+                  label={t('security.newPassword')}
+                  required
+                  value={form.password}
+                  onChange={(event) => updateForm('password', event.target.value)}
+                />
+                <PasswordField
+                  label={t('security.confirmNewPassword')}
+                  required
+                  value={form.password2}
+                  onChange={(event) => updateForm('password2', event.target.value)}
+                />
               </CardContent>
             </Card>
 

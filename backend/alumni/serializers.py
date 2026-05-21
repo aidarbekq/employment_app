@@ -177,8 +177,8 @@ class AdminAlumniCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
-    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    password2 = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, trim_whitespace=False, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, trim_whitespace=False)
     academic_group_id = serializers.PrimaryKeyRelatedField(
         queryset=AcademicGroup.objects.all(),
         source="academic_group",
@@ -221,11 +221,6 @@ class AdminAlumniCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("A user with this username already exists.")
         return value
 
-    def validate_password(self, value):
-        if value:
-            validate_password(value)
-        return value
-
     def validate(self, attrs):
         password = attrs.get("password") or ""
         password2 = attrs.get("password2") or ""
@@ -257,7 +252,7 @@ class AdminAlumniCreateSerializer(serializers.Serializer):
                 "self_study_topics",
             }
         }
-        password = validated_data.pop("password", "") or "DemoPass123!"
+        password = validated_data.pop("password")
         validated_data.pop("password2", None)
         user = User.objects.create_user(role=User.Roles.ALUMNI, password=password, **validated_data)
         profile, _ = AlumniProfile.objects.get_or_create(user=user)

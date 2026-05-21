@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import clsx from 'clsx';
+import { Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const fieldClass =
   'w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-primary-400 focus:ring-4 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500';
@@ -44,6 +46,52 @@ export const InputField: React.FC<InputFieldProps> = ({
     {helperText && <span className="block text-xs text-gray-500">{helperText}</span>}
   </label>
 );
+
+
+
+type PasswordFieldProps = BaseFieldProps &
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, 'className' | 'type'> & {
+    inputClassName?: string;
+  };
+
+export const PasswordField: React.FC<PasswordFieldProps> = ({
+  label,
+  helperText,
+  required,
+  className,
+  inputClassName,
+  autoComplete = 'new-password',
+  ...props
+}) => {
+  const { t } = useTranslation();
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className={clsx('block space-y-1.5', className)}>
+      <span className="text-sm font-semibold text-gray-700">
+        {label} {required && <span className="text-error-600">*</span>}
+      </span>
+      <div className="relative">
+        <input
+          {...props}
+          type={visible ? 'text' : 'password'}
+          required={required}
+          autoComplete={autoComplete}
+          className={clsx(fieldClass, 'pr-12', inputClassName)}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((value) => !value)}
+          className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
+          aria-label={visible ? t('auth.hidePassword') : t('auth.showPassword')}
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+      {helperText && <span className="block text-xs text-gray-500">{helperText}</span>}
+    </label>
+  );
+};
 
 export const TextareaField: React.FC<TextareaFieldProps> = ({
   label,
