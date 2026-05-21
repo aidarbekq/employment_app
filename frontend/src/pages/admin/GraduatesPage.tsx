@@ -11,8 +11,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '@/services/api';
+import { downloadBlob, getFileNameFromDisposition, getReportFallbackFileName } from '@/utils/download';
 import Button from '@/components/common/Button';
-import ExportMenu, { ExportFormat } from '@/components/common/ExportMenu';
+import ExportMenu, { type ExportFormat, type ReportLanguage } from '@/components/common/ExportMenu';
 import EmptyState from '@/components/common/EmptyState';
 import EmploymentStatusBadge from '@/components/common/EmploymentStatusBadge';
 import Pagination from '@/components/common/Pagination';
@@ -53,22 +54,6 @@ interface Graduate {
   resume: string | null;
 }
 
-const downloadBlob = (blob: Blob, fileName: string) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
-const getFileNameFromDisposition = (disposition: string | undefined, fallback: string) => {
-  if (!disposition) return fallback;
-  const match = disposition.match(/filename="?([^";]+)"?/i);
-  return match?.[1] || fallback;
-};
 
 const AdminGraduatesPage: React.FC = () => {
   const { t } = useTranslation();
@@ -113,14 +98,14 @@ const AdminGraduatesPage: React.FC = () => {
       .catch((err) => console.error('Error loading groups', err));
   }, []);
 
-  const handleExport = async (format: ExportFormat) => {
+  const handleExport = async (format: ExportFormat, language: ReportLanguage) => {
     setExportingFormat(format);
     try {
       const res = await api.get(`analytics/employment-report.${format}`, {
-        params,
+        params: { ...params, lang: language },
         responseType: 'blob',
       });
-      downloadBlob(res.data as Blob, getFileNameFromDisposition(res.headers['content-disposition'], `employment_report.${format}`));
+      downloadBlob(res.data as Blob, getFileNameFromDisposition(res.headers['content-disposition'], getReportFallbackFileName(language, format)));
     } catch (error) {
       console.error('Error exporting report', error);
     } finally {

@@ -1,18 +1,36 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Check, ChevronDown, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/common/Button';
 
 export type ExportFormat = 'pdf' | 'docx' | 'xlsx';
+export type ReportLanguage = 'ru' | 'en' | 'kg';
 
 interface ExportMenuProps {
-  onSelect: (format: ExportFormat) => void;
+  onSelect: (format: ExportFormat, language: ReportLanguage) => void;
   isLoading?: boolean;
   disabled?: boolean;
   className?: string;
 }
 
-const options: Array<{
+const normalizeReportLanguage = (language?: string): ReportLanguage => {
+  const normalized = (language || '').toLowerCase();
+  if (normalized.startsWith('en')) return 'en';
+  if (normalized.startsWith('kg') || normalized.startsWith('ky')) return 'kg';
+  return 'ru';
+};
+
+const languageOptions: Array<{
+  value: ReportLanguage;
+  labelKey: string;
+  shortLabel: string;
+}> = [
+  { value: 'ru', labelKey: 'admin.reportLanguageRu', shortLabel: 'RU' },
+  { value: 'en', labelKey: 'admin.reportLanguageEn', shortLabel: 'EN' },
+  { value: 'kg', labelKey: 'admin.reportLanguageKg', shortLabel: 'KG' },
+];
+
+const formatOptions: Array<{
   value: ExportFormat;
   icon: React.ReactNode;
   labelKey: string;
@@ -39,9 +57,14 @@ const options: Array<{
 ];
 
 const ExportMenu: React.FC<ExportMenuProps> = ({ onSelect, isLoading = false, disabled = false, className }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<ReportLanguage>(() => normalizeReportLanguage(i18n.language));
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setSelectedLanguage(normalizeReportLanguage(i18n.language));
+  }, [i18n.language]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -56,7 +79,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onSelect, isLoading = false, di
 
   const handleSelect = (format: ExportFormat) => {
     setIsOpen(false);
-    onSelect(format);
+    onSelect(format, selectedLanguage);
   };
 
   return (
@@ -80,14 +103,49 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onSelect, isLoading = false, di
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-gray-900/12 ring-1 ring-black/5"
+          className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-gray-900/12 ring-1 ring-black/5"
         >
-          <div className="border-b border-gray-100 bg-gray-50/80 px-4 py-3">
+          <div className="border-b border-gray-100 bg-gradient-to-br from-primary-50 via-white to-white px-4 py-3">
             <p className="text-sm font-semibold text-gray-900">{t('admin.chooseExportFormat')}</p>
-            <p className="mt-0.5 text-xs text-gray-500">{t('admin.chooseExportFormatHint')}</p>
+            <p className="mt-0.5 text-xs leading-5 text-gray-500">{t('admin.chooseExportFormatHint')}</p>
           </div>
+
+          <div className="border-b border-gray-100 px-4 py-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('admin.reportLanguage')}</p>
+              <p className="text-xs text-gray-400">{t('admin.reportLanguageHint')}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {languageOptions.map((option) => {
+                const isSelected = selectedLanguage === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
+                      isSelected
+                        ? 'border-primary-200 bg-primary-600 text-white shadow-md shadow-primary-600/20'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700'
+                    }`}
+                    onClick={() => setSelectedLanguage(option.value)}
+                    aria-pressed={isSelected}
+                  >
+                    {isSelected && <Check className="h-3.5 w-3.5" />}
+                    <span>{option.shortLabel}</span>
+                    <span className="sr-only">{t(option.labelKey)}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs leading-5 text-gray-500">
+              {t('admin.reportLanguageDescription', {
+                language: t(languageOptions.find((option) => option.value === selectedLanguage)?.labelKey || 'admin.reportLanguageRu'),
+              })}
+            </p>
+          </div>
+
           <div className="p-2">
-            {options.map((option) => (
+            {formatOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"

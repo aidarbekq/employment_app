@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/common/Card";
 import Button from "@/components/common/Button";
-import ExportMenu, { ExportFormat } from "@/components/common/ExportMenu";
+import ExportMenu, { type ExportFormat, type ReportLanguage } from "@/components/common/ExportMenu";
 import { FilterX, RefreshCw, TrendingUp, Users, UserCheck, Briefcase } from "lucide-react";
 import api from "@/services/api";
+import { downloadBlob, getFileNameFromDisposition, getReportFallbackFileName } from "@/utils/download";
 import { getListResults } from "@/utils/pagination";
 import {
   Area,
@@ -87,22 +88,6 @@ const STATUS_COLORS = ["#2563EB", "#60A5FA", "#14B8A6", "#F59E0B", "#EF4444", "#
 const isStatYear = (value: StatYear | StatsMeta | undefined): value is StatYear =>
   Boolean(value && "total" in value && "employed" in value);
 
-const downloadBlob = (blob: Blob, fileName: string) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
-const getFileNameFromDisposition = (disposition: string | undefined, fallback: string) => {
-  if (!disposition) return fallback;
-  const match = disposition.match(/filename="?([^";]+)"?/i);
-  return match?.[1] || fallback;
-};
 
 const buildCleanParams = (filters: ReportFilters) =>
   Object.fromEntries(
@@ -209,14 +194,14 @@ const AdminDashboardPage: React.FC = () => {
 
   const resetFilters = () => setFilters(EMPTY_FILTERS);
 
-  const handleExport = async (format: ExportFormat) => {
+  const handleExport = async (format: ExportFormat, language: ReportLanguage) => {
     setExportingFormat(format);
     try {
       const res = await api.get(`analytics/employment-report.${format}`, {
-        params,
+        params: { ...params, lang: language },
         responseType: "blob",
       });
-      const fallback = `employment_report.${format}`;
+      const fallback = getReportFallbackFileName(language, format);
       downloadBlob(res.data as Blob, getFileNameFromDisposition(res.headers["content-disposition"], fallback));
     } catch (error) {
       console.error("Error exporting report", error);

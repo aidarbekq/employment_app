@@ -187,7 +187,7 @@
     "employmentData": "Employment and survey",
     "groupAutofillHint": "Direction, profile and study form were filled from group {{group}}. You can edit them manually.",
     "filters": "Filters",
-    "graduatesListHint": "These filters are also applied to the PDF report.",
+    "graduatesListHint": "These filters are also applied to report export.",
     "exportPdf": "Export PDF",
     "surveyed": "Surveyed",
     "surveyedHint": "Graduates included in percentage calculations",
@@ -221,7 +221,7 @@
     "vacanciesListHint": "All employer vacancies with quick preview and filtering.",
     "exportingReport": "Preparing report...",
     "chooseExportFormat": "Export format",
-    "chooseExportFormatHint": "Current page filters will be preserved.",
+    "chooseExportFormatHint": "Choose the language and format. Current page filters will be preserved.",
     "exportFormatPdf": "PDF",
     "exportFormatPdfHint": "For printing and official sharing.",
     "exportFormatDocx": "Word (DOCX)",
@@ -231,7 +231,13 @@
     "addEmployer": "Add employer",
     "addEmployerHint": "The administrator creates an employer account and organization profile.",
     "addEmployerSideTitle": "Login details",
-    "addEmployerSideText": "After creation, the employer can sign in, update the company profile and manage vacancies."
+    "addEmployerSideText": "After creation, the employer can sign in, update the company profile and manage vacancies.",
+    "reportLanguage": "Report language",
+    "reportLanguageHint": "defaults to UI language",
+    "reportLanguageRu": "Russian",
+    "reportLanguageEn": "English",
+    "reportLanguageKg": "Kyrgyz",
+    "reportLanguageDescription": "The report and downloaded file name will use: {{language}}."
   },
   "common": {
     "back": "Back",

@@ -189,7 +189,7 @@
     "employmentData": "Жумушка орношуу жана анкета",
     "groupAutofillHint": "{{group}} тайпасынан багыт, профиль жана окуу формасы толтурулду. Кол менен өзгөртүүгө болот.",
     "filters": "Чыпкалар",
-    "graduatesListHint": "Бул чыпкалар PDF отчетко да колдонулат.",
+    "graduatesListHint": "Бул чыпкалар отчетту экспорттоого да колдонулат.",
     "exportPdf": "PDF экспорт",
     "surveyed": "Сурамжыланган",
     "surveyedHint": "Пайыздарды эсептөөгө кирген бүтүрүүчүлөр",
@@ -223,7 +223,7 @@
     "vacanciesListHint": "Жумуш берүүчүлөрдүн бардык вакансиялары, тез көрүү жана фильтрлөө.",
     "exportingReport": "Отчёт даярдалууда...",
     "chooseExportFormat": "Экспорт форматы",
-    "chooseExportFormatHint": "Учурдагы барактын чыпкалары сакталат.",
+    "chooseExportFormatHint": "Тилди жана форматты тандаңыз. Учурдагы барактын чыпкалары сакталат.",
     "exportFormatPdf": "PDF",
     "exportFormatPdfHint": "Басып чыгаруу жана расмий берүү үчүн.",
     "exportFormatDocx": "Word (DOCX)",
@@ -233,7 +233,13 @@
     "addEmployer": "Жумуш берүүчү кошуу",
     "addEmployerHint": "Администратор жумуш берүүчүнүн аккаунтун жана уюм карточкасын түзөт.",
     "addEmployerSideTitle": "Кирүү маалыматы",
-    "addEmployerSideText": "Түзүлгөндөн кийин жумуш берүүчү системага кирип, компания профилин жаңыртып жана вакансияларды башкара алат."
+    "addEmployerSideText": "Түзүлгөндөн кийин жумуш берүүчү системага кирип, компания профилин жаңыртып жана вакансияларды башкара алат.",
+    "reportLanguage": "Отчет тили",
+    "reportLanguageHint": "демейкиси — интерфейс тили",
+    "reportLanguageRu": "Орусча",
+    "reportLanguageEn": "Англисче",
+    "reportLanguageKg": "Кыргызча",
+    "reportLanguageDescription": "Отчет жана файлдын аталышы ушул тилде түзүлөт: {{language}}."
   },
   "common": {
     "back": "Артка",

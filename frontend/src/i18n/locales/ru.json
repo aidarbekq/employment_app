@@ -187,7 +187,7 @@
     "employmentData": "Трудоустройство и анкета",
     "groupAutofillHint": "Данные направления, профиля и формы обучения заполнены из группы {{group}}. Их можно изменить вручную.",
     "filters": "Фильтры",
-    "graduatesListHint": "Фильтры используются также для PDF-отчета.",
+    "graduatesListHint": "Фильтры используются также для выгрузки отчета.",
     "exportPdf": "Экспорт PDF",
     "surveyed": "Опрошены",
     "surveyedHint": "Выпускники, включенные в расчет процентов",
@@ -221,7 +221,7 @@
     "vacanciesListHint": "Все вакансии работодателей с быстрым просмотром и фильтрацией.",
     "exportingReport": "Подготовка отчета...",
     "chooseExportFormat": "Формат выгрузки",
-    "chooseExportFormatHint": "Фильтры текущей страницы сохраняются.",
+    "chooseExportFormatHint": "Выберите язык и формат. Фильтры текущей страницы сохраняются.",
     "exportFormatPdf": "PDF",
     "exportFormatPdfHint": "Для печати и официальной передачи.",
     "exportFormatDocx": "Word (DOCX)",
@@ -231,7 +231,13 @@
     "addEmployer": "Добавить работодателя",
     "addEmployerHint": "Администратор создает учетную запись работодателя и карточку организации.",
     "addEmployerSideTitle": "Данные для входа",
-    "addEmployerSideText": "После создания работодатель сможет войти в систему, обновить профиль компании и управлять своими вакансиями."
+    "addEmployerSideText": "После создания работодатель сможет войти в систему, обновить профиль компании и управлять своими вакансиями.",
+    "reportLanguage": "Язык отчета",
+    "reportLanguageHint": "по умолчанию — язык интерфейса",
+    "reportLanguageRu": "Русский",
+    "reportLanguageEn": "Английский",
+    "reportLanguageKg": "Кыргызский",
+    "reportLanguageDescription": "Отчет и название файла будут сформированы на языке: {{language}}."
   },
   "common": {
     "back": "Назад",

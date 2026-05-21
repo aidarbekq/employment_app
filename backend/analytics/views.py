@@ -4,7 +4,9 @@ from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 import os
+import re
 from typing import Iterable
+from urllib.parse import quote
 
 from django.db.models import Count, Q, QuerySet
 from django.http import HttpResponse
@@ -27,9 +29,234 @@ from alumni.models import AcademicGroup, AlumniProfile
 from employers.models import Employer
 
 
-REPORT_TITLE = "Отчет трудоустройства кафедры «ИСТ им. акад. А. Жайнакова»"
-REPORT_SUBTITLE = "Кафедра «Информационные системы и технологии имени академика А. Жайнакова», ИЭТ КГТУ им. И. Раззакова"
-UNKNOWN_LABEL = "Неизвестно"
+DEFAULT_REPORT_LANGUAGE = "ru"
+REPORT_LANGUAGES = {"ru", "en", "kg"}
+REPORT_LANGUAGE_ALIASES = {
+    "ru": "ru",
+    "ru-ru": "ru",
+    "en": "en",
+    "en-us": "en",
+    "en-gb": "en",
+    "kg": "kg",
+    "ky": "kg",
+    "ky-kg": "kg",
+}
+
+REPORT_TEXTS: dict[str, dict[str, str]] = {
+    "ru": {
+        "title": "Отчет трудоустройства кафедры «ИСТ им. акад. А. Жайнакова»",
+        "subtitle": "Кафедра «Информационные системы и технологии имени академика А. Жайнакова», ИЭТ КГТУ им. И. Раззакова",
+        "all_selection": "Все группы и годы выпуска",
+        "section_1": "Раздел 1. Реестр выпускников и сведения о занятости",
+        "section_2": "Раздел 2. Сводные показатели трудоустройства",
+        "chair_signature": "Зав. кафедрой «ИСТ им. акад. А. Жайнакова» ____________________",
+        "unsupported_export": "Неподдерживаемый формат экспорта. Используйте pdf, docx или xlsx.",
+        "file_stem": "отчет_трудоустройство_выпускников",
+        "sheet_graduates": "Выпускники",
+        "sheet_summary": "Сводка",
+        "number": "№",
+        "full_name": "ФИО",
+        "group": "Группа",
+        "graduation_year": "Год выпуска",
+        "year_graduation": "Год окончания",
+        "specialty": "Специальность",
+        "specialty_diploma": "Специальность по диплому",
+        "employment": "Трудоустройство",
+        "employed_specialty_header": "по спец.\n(указать должность, место работы)",
+        "not_specialty_self_employed_header": "не по спец.\n/ самозанятость",
+        "not_working_unknown_header": "не работает\n/ неизвестно",
+        "continued_education_where": "Продолжил обучение\nУказать где именно",
+        "useful_question": "Что из преподававшегося на факультете наиболее полезно в вашей сегодняшней работе?",
+        "self_study_question": "Что пришлось изучать самостоятельно?",
+        "employed_specialty": "По спец. (должность, место работы)",
+        "not_specialty_self_employed": "Не по спец. / самозанятость",
+        "not_working_unknown": "Не работает / неизвестно",
+        "continued_education": "Продолжил обучение",
+        "useful_work": "Полезно в работе",
+        "self_study": "Изучал самостоятельно",
+        "direction_profile": "Направление / профиль",
+        "form_level": "Форма / уровень",
+        "graduates_count": "Кол-во выпускников",
+        "surveyed_count": "Кол-во опрошенных",
+        "works_specialty_percent": "Работают по спец. (%)",
+        "works_not_specialty_percent": "Работают не по спец. (%)",
+        "self_employed_percent": "Самозанятые (%)",
+        "continued_education_percent": "Продолжили учебу (%)",
+        "not_working_percent": "Не работают (%)",
+        "unknown_percent": "Неизвестно (%)",
+        "year_filter": "Год выпуска",
+        "group_filter": "Группа",
+        "direction_filter": "Направление",
+        "study_form_filter": "Форма обучения",
+        "degree_level_filter": "Уровень",
+        "status_filter": "Статус",
+        "search_filter": "Поиск",
+        "not_working": "Не работает",
+        "unknown": "Неизвестно",
+        "no_year": "Без года",
+    },
+    "en": {
+        "title": "Graduate employment report of the IST Department named after Acad. A. Zhainakov",
+        "subtitle": "Department of Information Systems and Technologies named after Academician A. Zhainakov, IET KSTU named after I. Razzakov",
+        "all_selection": "All groups and graduation years",
+        "section_1": "Section 1. Graduate register and employment details",
+        "section_2": "Section 2. Summary employment indicators",
+        "chair_signature": "Head of the IST Department named after Acad. A. Zhainakov ____________________",
+        "unsupported_export": "Unsupported export format. Use pdf, docx or xlsx.",
+        "file_stem": "graduate_employment_report",
+        "sheet_graduates": "Graduates",
+        "sheet_summary": "Summary",
+        "number": "No.",
+        "full_name": "Full name",
+        "group": "Group",
+        "graduation_year": "Graduation year",
+        "year_graduation": "Graduation year",
+        "specialty": "Specialty",
+        "specialty_diploma": "Diploma specialty",
+        "employment": "Employment",
+        "employed_specialty_header": "by specialty\n(position, workplace)",
+        "not_specialty_self_employed_header": "not by specialty\n/ self-employed",
+        "not_working_unknown_header": "not working\n/ unknown",
+        "continued_education_where": "Continued education\nplace",
+        "useful_question": "What from the faculty curriculum is most useful in your current work?",
+        "self_study_question": "What did you have to study independently?",
+        "employed_specialty": "By specialty (position, workplace)",
+        "not_specialty_self_employed": "Not by specialty / self-employed",
+        "not_working_unknown": "Not working / unknown",
+        "continued_education": "Continued education",
+        "useful_work": "Useful in work",
+        "self_study": "Studied independently",
+        "direction_profile": "Direction / profile",
+        "form_level": "Study form / level",
+        "graduates_count": "Graduates",
+        "surveyed_count": "Surveyed",
+        "works_specialty_percent": "Works by specialty (%)",
+        "works_not_specialty_percent": "Works not by specialty (%)",
+        "self_employed_percent": "Self-employed (%)",
+        "continued_education_percent": "Continued education (%)",
+        "not_working_percent": "Not working (%)",
+        "unknown_percent": "Unknown (%)",
+        "year_filter": "Graduation year",
+        "group_filter": "Group",
+        "direction_filter": "Direction",
+        "study_form_filter": "Study form",
+        "degree_level_filter": "Level",
+        "status_filter": "Status",
+        "search_filter": "Search",
+        "not_working": "Not working",
+        "unknown": "Unknown",
+        "no_year": "No year",
+    },
+    "kg": {
+        "title": "Акад. А. Жайнаков атындагы ИСТ кафедрасынын бүтүрүүчүлөрүнүн жумушка орношуусу боюнча отчет",
+        "subtitle": "Академик А. Жайнаков атындагы маалыматтык системалар жана технологиялар кафедрасы, И. Раззаков атындагы КМТУнун ЭТИ",
+        "all_selection": "Бардык тайпалар жана бүтүрүү жылдары",
+        "section_1": "1-бөлүм. Бүтүрүүчүлөрдүн реестри жана жумушка орношуу маалыматтары",
+        "section_2": "2-бөлүм. Жумушка орношуу боюнча жыйынтык көрсөткүчтөр",
+        "chair_signature": "Акад. А. Жайнаков атындагы ИСТ кафедрасынын башчысы ____________________",
+        "unsupported_export": "Экспорт форматы колдоого алынбайт. pdf, docx же xlsx колдонуңуз.",
+        "file_stem": "бүтүрүүчүлөр_жумушка_орношуу_отчету",
+        "sheet_graduates": "Бүтүрүүчүлөр",
+        "sheet_summary": "Жыйынтык",
+        "number": "№",
+        "full_name": "Ф.А.А.",
+        "group": "Тайпа",
+        "graduation_year": "Бүтүрүү жылы",
+        "year_graduation": "Бүтүрүү жылы",
+        "specialty": "Адистик",
+        "specialty_diploma": "Диплом боюнча адистик",
+        "employment": "Жумушка орношуу",
+        "employed_specialty_header": "адистиги боюнча\n(кызматы, иштеген жери)",
+        "not_specialty_self_employed_header": "адистиги боюнча эмес\n/ өз алдынча иш",
+        "not_working_unknown_header": "иштебейт\n/ белгисиз",
+        "continued_education_where": "Окуусун улантты\nкайда",
+        "useful_question": "Факультетте окутулган кайсы нерселер азыркы ишиңизде эң пайдалуу болду?",
+        "self_study_question": "Эмнени өз алдынча үйрөнүүгө туура келди?",
+        "employed_specialty": "Адистиги боюнча (кызматы, иштеген жери)",
+        "not_specialty_self_employed": "Адистиги боюнча эмес / өз алдынча иш",
+        "not_working_unknown": "Иштебейт / белгисиз",
+        "continued_education": "Окуусун улантты",
+        "useful_work": "Иште пайдалуу",
+        "self_study": "Өз алдынча үйрөнгөн",
+        "direction_profile": "Багыт / профиль",
+        "form_level": "Окуу формасы / деңгээли",
+        "graduates_count": "Бүтүрүүчүлөрдүн саны",
+        "surveyed_count": "Сурамжылангандар",
+        "works_specialty_percent": "Адистиги боюнча иштейт (%)",
+        "works_not_specialty_percent": "Адистиги боюнча эмес иштейт (%)",
+        "self_employed_percent": "Өз алдынча иштегендер (%)",
+        "continued_education_percent": "Окуусун уланткандар (%)",
+        "not_working_percent": "Иштебегендер (%)",
+        "unknown_percent": "Белгисиз (%)",
+        "year_filter": "Бүтүрүү жылы",
+        "group_filter": "Тайпа",
+        "direction_filter": "Багыт",
+        "study_form_filter": "Окуу формасы",
+        "degree_level_filter": "Деңгээли",
+        "status_filter": "Статус",
+        "search_filter": "Издөө",
+        "not_working": "Иштебейт",
+        "unknown": "Белгисиз",
+        "no_year": "Жылы жок",
+    },
+}
+
+CHOICE_LABELS: dict[str, dict[str, dict[str, str]]] = {
+    "study_form": {
+        "ru": {AcademicGroup.StudyForm.FULL_TIME: "Очное", AcademicGroup.StudyForm.PART_TIME: "Заочное (ДОТ)"},
+        "en": {AcademicGroup.StudyForm.FULL_TIME: "Full-time", AcademicGroup.StudyForm.PART_TIME: "Part-time / distance"},
+        "kg": {AcademicGroup.StudyForm.FULL_TIME: "Күндүзгү", AcademicGroup.StudyForm.PART_TIME: "Сырттан / ДОТ"},
+    },
+    "degree_level": {
+        "ru": {AcademicGroup.DegreeLevel.BACHELOR: "Бакалавриат", AcademicGroup.DegreeLevel.MASTER: "Магистратура"},
+        "en": {AcademicGroup.DegreeLevel.BACHELOR: "Bachelor", AcademicGroup.DegreeLevel.MASTER: "Master"},
+        "kg": {AcademicGroup.DegreeLevel.BACHELOR: "Бакалавриат", AcademicGroup.DegreeLevel.MASTER: "Магистратура"},
+    },
+    "employment_status": {
+        "ru": {
+            AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY: "Работает по специальности",
+            AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY: "Работает не по специальности",
+            AlumniProfile.EmploymentStatus.SELF_EMPLOYED: "Самозанятый / предприниматель",
+            AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION: "Продолжает обучение",
+            AlumniProfile.EmploymentStatus.UNEMPLOYED: "Не работает",
+            AlumniProfile.EmploymentStatus.LOST_CONTACT: "Неизвестно",
+        },
+        "en": {
+            AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY: "Works by specialty",
+            AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY: "Works not by specialty",
+            AlumniProfile.EmploymentStatus.SELF_EMPLOYED: "Self-employed / entrepreneur",
+            AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION: "Continues education",
+            AlumniProfile.EmploymentStatus.UNEMPLOYED: "Not working",
+            AlumniProfile.EmploymentStatus.LOST_CONTACT: "Unknown",
+        },
+        "kg": {
+            AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY: "Адистиги боюнча иштейт",
+            AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY: "Адистиги боюнча эмес иштейт",
+            AlumniProfile.EmploymentStatus.SELF_EMPLOYED: "Өз алдынча иштеген / ишкер",
+            AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION: "Окуусун улантууда",
+            AlumniProfile.EmploymentStatus.UNEMPLOYED: "Иштебейт",
+            AlumniProfile.EmploymentStatus.LOST_CONTACT: "Белгисиз",
+        },
+    },
+}
+
+
+def _normalize_report_language(value: str | None) -> str:
+    if not value:
+        return DEFAULT_REPORT_LANGUAGE
+    cleaned = value.lower().strip().replace("_", "-")
+    first = cleaned.split(",", 1)[0].split(";", 1)[0].strip()
+    return REPORT_LANGUAGE_ALIASES.get(first, REPORT_LANGUAGE_ALIASES.get(first[:2], DEFAULT_REPORT_LANGUAGE))
+
+
+def _texts(lang: str) -> dict[str, str]:
+    return REPORT_TEXTS.get(lang, REPORT_TEXTS[DEFAULT_REPORT_LANGUAGE])
+
+
+def _choice_label(category: str, value: str | None, lang: str) -> str:
+    if not value:
+        return "—"
+    return CHOICE_LABELS.get(category, {}).get(lang, {}).get(value, str(value))
 
 
 class RotatedParagraph(Paragraph):
@@ -58,8 +285,15 @@ def _percent(numerator: int, denominator: int) -> float:
     return round((numerator / denominator) * 100, 1) if denominator else 0.0
 
 
-def _count_with_percent(count: int, denominator: int) -> str:
-    return f"{count} / {_percent(count, denominator)}%" if denominator else f"{count} / 0%"
+def _format_percent(value: float, lang: str) -> str:
+    text = f"{value:.1f}".rstrip("0").rstrip(".")
+    if lang in {"ru", "kg"}:
+        text = text.replace(".", ",")
+    return f"{text}%"
+
+
+def _count_with_percent(count: int, denominator: int, lang: str) -> str:
+    return f"{count} / {_format_percent(_percent(count, denominator), lang)}" if denominator else f"{count} / {_format_percent(0, lang)}"
 
 
 def _apply_profile_filters(qs: QuerySet[AlumniProfile], request) -> QuerySet[AlumniProfile]:
@@ -171,18 +405,19 @@ class EmploymentReportExportView(APIView):
         if export_format == "excel":
             export_format = "xlsx"
 
+        report_language = self._report_language(request)
         profiles = self._filtered_profiles(request)
-        selection_description = self._selection_description(request)
+        selection_description = self._selection_description(request, report_language)
 
         if export_format == "pdf":
-            return self._pdf_response(profiles, selection_description)
+            return self._pdf_response(profiles, selection_description, report_language)
         if export_format == "docx":
-            return self._docx_response(profiles, selection_description)
+            return self._docx_response(profiles, selection_description, report_language)
         if export_format == "xlsx":
-            return self._xlsx_response(profiles, selection_description)
+            return self._xlsx_response(profiles, selection_description, report_language)
 
         return Response(
-            {"detail": "Unsupported export format. Use pdf, docx or xlsx."},
+            {"detail": _texts(report_language)["unsupported_export"]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -195,11 +430,27 @@ class EmploymentReportExportView(APIView):
         )
         return list(_apply_profile_filters(qs, request))
 
-    def _report_filename(self, extension: str) -> str:
-        stamp = timezone.localtime().strftime("%Y-%m-%d_%H-%M")
-        return f"employment_report_{stamp}.{extension}"
+    def _report_language(self, request) -> str:
+        explicit_language = request.query_params.get("lang")
+        if explicit_language:
+            return _normalize_report_language(explicit_language)
+        return _normalize_report_language(request.headers.get("Accept-Language"))
 
-    def _selection_description(self, request) -> str:
+    def _report_filename(self, extension: str, lang: str) -> str:
+        stamp = timezone.localtime().strftime("%Y-%m-%d_%H-%M")
+        return f"{_texts(lang)['file_stem']}_{stamp}.{extension}"
+
+    def _ascii_filename(self, filename: str) -> str:
+        fallback = filename.encode("ascii", "ignore").decode("ascii")
+        fallback = re.sub(r"[^A-Za-z0-9_.-]+", "_", fallback).strip("._-")
+        return fallback or "employment_report"
+
+    def _attachment_header(self, filename: str) -> str:
+        fallback = self._ascii_filename(filename)
+        return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(filename)}"
+
+    def _selection_description(self, request, lang: str) -> str:
+        labels = _texts(lang)
         parts = []
         year = request.query_params.get("graduation_year")
         group_id = request.query_params.get("academic_group")
@@ -209,21 +460,21 @@ class EmploymentReportExportView(APIView):
         direction_code = request.query_params.get("direction_code")
         search = request.query_params.get("search")
         if year:
-            parts.append(f"Год выпуска: {year}")
+            parts.append(f"{labels['year_filter']}: {year}")
         if group_id:
             group = AcademicGroup.objects.filter(pk=group_id).first()
-            parts.append(f"Группа: {group.name if group else group_id}")
+            parts.append(f"{labels['group_filter']}: {group.name if group else group_id}")
         if direction_code:
-            parts.append(f"Направление: {direction_code}")
+            parts.append(f"{labels['direction_filter']}: {direction_code}")
         if study_form:
-            parts.append(f"Форма обучения: {dict(AcademicGroup.StudyForm.choices).get(study_form, study_form)}")
+            parts.append(f"{labels['study_form_filter']}: {_choice_label('study_form', study_form, lang)}")
         if degree_level:
-            parts.append(f"Уровень: {dict(AcademicGroup.DegreeLevel.choices).get(degree_level, degree_level)}")
+            parts.append(f"{labels['degree_level_filter']}: {_choice_label('degree_level', degree_level, lang)}")
         if status_value:
-            parts.append(f"Статус: {dict(AlumniProfile.EmploymentStatus.choices).get(status_value, status_value)}")
+            parts.append(f"{labels['status_filter']}: {_choice_label('employment_status', status_value, lang)}")
         if search:
-            parts.append(f"Поиск: {search}")
-        return " · ".join(parts) if parts else "Все группы и годы выпуска"
+            parts.append(f"{labels['search_filter']}: {search}")
+        return " · ".join(parts) if parts else labels["all_selection"]
 
     def _register_font(self) -> str:
         paths = [
@@ -269,11 +520,12 @@ class EmploymentReportExportView(APIView):
         parts = [part for part in (company, profile.position) if part]
         return "\n".join(parts) or "—"
 
-    def _not_working_text(self, profile: AlumniProfile) -> str:
+    def _not_working_text(self, profile: AlumniProfile, lang: str) -> str:
+        labels = _texts(lang)
         if profile.employment_status == AlumniProfile.EmploymentStatus.UNEMPLOYED:
-            return "Не работает"
+            return labels["not_working"]
         if profile.employment_status == AlumniProfile.EmploymentStatus.LOST_CONTACT:
-            return UNKNOWN_LABEL
+            return labels["unknown"]
         return "—"
 
     def _full_name(self, profile: AlumniProfile) -> str:
@@ -290,22 +542,23 @@ class EmploymentReportExportView(APIView):
         profile_name = profile.profile or (profile.academic_group.profile if profile.academic_group else "")
         return "\n".join(part for part in (direction or group_direction, profile_name) if part) or "—"
 
-    def _graduate_headers(self) -> list[str]:
+    def _graduate_headers(self, lang: str) -> list[str]:
+        labels = _texts(lang)
         return [
-            "№",
-            "ФИО",
-            "Группа",
-            "Год окончания",
-            "Специальность по диплому",
-            "По спец. (должность, место работы)",
-            "Не по спец. / самозанятость",
-            "Не работает / неизвестно",
-            "Продолжил обучение",
-            "Полезно в работе",
-            "Изучал самостоятельно",
+            labels["number"],
+            labels["full_name"],
+            labels["group"],
+            labels["year_graduation"],
+            labels["specialty_diploma"],
+            labels["employed_specialty"],
+            labels["not_specialty_self_employed"],
+            labels["not_working_unknown"],
+            labels["continued_education"],
+            labels["useful_work"],
+            labels["self_study"],
         ]
 
-    def _profile_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
+    def _profile_row_values(self, profile: AlumniProfile, index: int, lang: str) -> list[str | int | None]:
         status_value = profile.employment_status
         work = self._work_text(profile)
         return [
@@ -316,7 +569,7 @@ class EmploymentReportExportView(APIView):
             profile.specialty or self._direction_profile_text(profile),
             work if status_value == AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY else "—",
             work if status_value in (AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY, AlumniProfile.EmploymentStatus.SELF_EMPLOYED) else "—",
-            self._not_working_text(profile),
+            self._not_working_text(profile, lang),
             profile.continuing_education_place
             if status_value == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or profile.continuing_education_place
             else "—",
@@ -324,20 +577,21 @@ class EmploymentReportExportView(APIView):
             profile.self_study_topics or "—",
         ]
 
-    def _graduate_main_headers(self) -> list[str]:
+    def _graduate_main_headers(self, lang: str) -> list[str]:
+        labels = _texts(lang)
         return [
-            "№",
-            "ФИО",
-            "Группа",
-            "Год",
-            "Специальность",
-            "По специальности",
-            "Не по специальности / самозанятость",
-            "Не работает / неизвестно",
-            "Продолжил обучение",
+            labels["number"],
+            labels["full_name"],
+            labels["group"],
+            labels["graduation_year"],
+            labels["specialty"],
+            labels["employed_specialty"],
+            labels["not_specialty_self_employed"],
+            labels["not_working_unknown"],
+            labels["continued_education"],
         ]
 
-    def _profile_main_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
+    def _profile_main_row_values(self, profile: AlumniProfile, index: int, lang: str) -> list[str | int | None]:
         status_value = profile.employment_status
         work = self._work_text(profile)
         return [
@@ -348,14 +602,15 @@ class EmploymentReportExportView(APIView):
             profile.specialty or self._direction_profile_text(profile),
             work if status_value == AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY else "—",
             work if status_value in (AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY, AlumniProfile.EmploymentStatus.SELF_EMPLOYED) else "—",
-            self._not_working_text(profile),
+            self._not_working_text(profile, lang),
             profile.continuing_education_place
             if status_value == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or profile.continuing_education_place
             else "—",
         ]
 
-    def _survey_headers(self) -> list[str]:
-        return ["№", "ФИО", "Полезно в работе", "Изучал самостоятельно"]
+    def _survey_headers(self, lang: str) -> list[str]:
+        labels = _texts(lang)
+        return [labels["number"], labels["full_name"], labels["useful_work"], labels["self_study"]]
 
     def _profile_survey_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
         return [
@@ -365,10 +620,10 @@ class EmploymentReportExportView(APIView):
             profile.self_study_topics or "—",
         ]
 
-    def _graduates_main_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
-        data = [[self._p(value, styles, center=True) for value in self._graduate_main_headers()]]
+    def _graduates_main_table(self, profiles: Iterable[AlumniProfile], styles, lang: str) -> Table:
+        data = [[self._p(value, styles, center=True) for value in self._graduate_main_headers(lang)]]
         for index, profile in enumerate(profiles, start=1):
-            row = self._profile_main_row_values(profile, index)
+            row = self._profile_main_row_values(profile, index, lang)
             data.append([self._p(value, styles, center=column_index in (0, 2, 3, 4)) for column_index, value in enumerate(row)])
 
         table = Table(
@@ -379,8 +634,8 @@ class EmploymentReportExportView(APIView):
         table.setStyle(self._table_style())
         return table
 
-    def _survey_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
-        data = [[self._p(value, styles, center=True) for value in self._survey_headers()]]
+    def _survey_table(self, profiles: Iterable[AlumniProfile], styles, lang: str) -> Table:
+        data = [[self._p(value, styles, center=True) for value in self._survey_headers(lang)]]
         for index, profile in enumerate(profiles, start=1):
             row = self._profile_survey_row_values(profile, index)
             data.append([self._p(value, styles, center=column_index == 0) for column_index, value in enumerate(row)])
@@ -393,40 +648,36 @@ class EmploymentReportExportView(APIView):
         table.setStyle(self._table_style())
         return table
 
-    def _graduate_reference_headers(self, styles) -> list[list[Paragraph | RotatedParagraph | str]]:
+    def _graduate_reference_headers(self, styles, lang: str) -> list[list[Paragraph | RotatedParagraph | str]]:
+        labels = _texts(lang)
         return [
             [
-                self._p("№", styles, center=True, style_name="HeaderCell"),
-                self._p("ФИО", styles, center=True, style_name="HeaderCell"),
-                self._vertical_p("Год окончания", styles),
-                self._vertical_p("Специальность по диплому", styles),
-                self._p("Трудоустройство", styles, center=True, style_name="HeaderCell"),
+                self._p(labels["number"], styles, center=True, style_name="HeaderCell"),
+                self._p(labels["full_name"], styles, center=True, style_name="HeaderCell"),
+                self._vertical_p(labels["year_graduation"], styles),
+                self._vertical_p(labels["specialty_diploma"], styles),
+                self._p(labels["employment"], styles, center=True, style_name="HeaderCell"),
                 "",
                 "",
-                self._p("Продолжил обучение\nУказать где именно", styles, center=True, style_name="HeaderCell"),
-                self._p(
-                    "Что из преподававшегося на факультете наиболее полезно в вашей сегодняшней работе?",
-                    styles,
-                    center=True,
-                    style_name="HeaderCellSmall",
-                ),
-                self._p("Что пришлось изучать самостоятельно?", styles, center=True, style_name="HeaderCellSmall"),
+                self._p(labels["continued_education_where"], styles, center=True, style_name="HeaderCell"),
+                self._p(labels["useful_question"], styles, center=True, style_name="HeaderCellSmall"),
+                self._p(labels["self_study_question"], styles, center=True, style_name="HeaderCellSmall"),
             ],
             [
                 "",
                 "",
                 "",
                 "",
-                self._p("по спец.\n(указать должность, место работы)", styles, center=True, style_name="HeaderCellSmall"),
-                self._p("не по спец.\n/ самозанятость", styles, center=True, style_name="HeaderCellSmall"),
-                self._p("не работает\n/ неизвестно", styles, center=True, style_name="HeaderCellSmall"),
+                self._p(labels["employed_specialty_header"], styles, center=True, style_name="HeaderCellSmall"),
+                self._p(labels["not_specialty_self_employed_header"], styles, center=True, style_name="HeaderCellSmall"),
+                self._p(labels["not_working_unknown_header"], styles, center=True, style_name="HeaderCellSmall"),
                 "",
                 "",
                 "",
             ],
         ]
 
-    def _pdf_profile_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
+    def _pdf_profile_row_values(self, profile: AlumniProfile, index: int, lang: str) -> list[str | int | None]:
         status_value = profile.employment_status
         work = self._work_text(profile)
         return [
@@ -436,7 +687,7 @@ class EmploymentReportExportView(APIView):
             profile.specialty or self._direction_profile_text(profile),
             work if status_value == AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY else "—",
             work if status_value in (AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY, AlumniProfile.EmploymentStatus.SELF_EMPLOYED) else "—",
-            self._not_working_text(profile),
+            self._not_working_text(profile, lang),
             profile.continuing_education_place
             if status_value == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or profile.continuing_education_place
             else "—",
@@ -444,10 +695,10 @@ class EmploymentReportExportView(APIView):
             profile.self_study_topics or "—",
         ]
 
-    def _graduates_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
-        data = self._graduate_reference_headers(styles)
+    def _graduates_table(self, profiles: Iterable[AlumniProfile], styles, lang: str) -> Table:
+        data = self._graduate_reference_headers(styles, lang)
         for index, profile in enumerate(profiles, start=1):
-            row = self._pdf_profile_row_values(profile, index)
+            row = self._pdf_profile_row_values(profile, index, lang)
             data.append([self._p(value, styles, center=column_index in (0, 2, 3)) for column_index, value in enumerate(row)])
 
         table = Table(
@@ -459,29 +710,32 @@ class EmploymentReportExportView(APIView):
         table.setStyle(self._graduate_table_style())
         return table
 
-    def _summary_headers(self) -> list[str]:
+    def _summary_headers(self, lang: str) -> list[str]:
+        labels = _texts(lang)
         return [
-            "Год выпуска",
-            "Направление / профиль",
-            "Форма / уровень",
-            "Кол-во выпускников",
-            "Кол-во опрошенных",
-            "Работают по спец. (%)",
-            "Работают не по спец. (%)",
-            "Самозанятые (%)",
-            "Продолжили учебу (%)",
-            "Не работают (%)",
-            "Неизвестно (%)",
+            labels["graduation_year"],
+            labels["direction_profile"],
+            labels["form_level"],
+            labels["graduates_count"],
+            labels["surveyed_count"],
+            labels["works_specialty_percent"],
+            labels["works_not_specialty_percent"],
+            labels["self_employed_percent"],
+            labels["continued_education_percent"],
+            labels["not_working_percent"],
+            labels["unknown_percent"],
         ]
 
-    def _summary_row_values(self, profiles: Iterable[AlumniProfile]) -> list[list[str | int]]:
+    def _summary_row_values(self, profiles: Iterable[AlumniProfile], lang: str) -> list[list[str | int]]:
         buckets: dict[tuple[str, str, str, str, int | None], list[AlumniProfile]] = defaultdict(list)
         for profile in profiles:
             group = profile.academic_group
             direction_code = group.direction_code if group else "—"
             profile_name = profile.profile or (group.profile if group else "—")
-            study_form = profile.get_study_form_display() if profile.study_form else (group.get_study_form_display() if group else "—")
-            degree_level = profile.get_degree_level_display() if profile.degree_level else (group.get_degree_level_display() if group else "—")
+            study_form_value = profile.study_form or (group.study_form if group else None)
+            degree_level_value = profile.degree_level or (group.degree_level if group else None)
+            study_form = _choice_label("study_form", study_form_value, lang)
+            degree_level = _choice_label("degree_level", degree_level_value, lang)
             buckets[(direction_code, profile_name, study_form, degree_level, profile.graduation_year)].append(profile)
 
         rows: list[list[str | int]] = []
@@ -500,23 +754,23 @@ class EmploymentReportExportView(APIView):
                     continuing_count += 1
             direction_label = f"{direction_code}\n{profile_name}"
             rows.append([
-                year or "Без года",
+                year or _texts(lang)["no_year"],
                 direction_label,
                 f"{study_form}\n{degree_level}",
                 total,
                 surveyed,
-                _count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY], denominator),
-                _count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY], denominator),
-                _count_with_percent(counts[AlumniProfile.EmploymentStatus.SELF_EMPLOYED], denominator),
-                _count_with_percent(continuing_count, denominator),
-                _count_with_percent(counts[AlumniProfile.EmploymentStatus.UNEMPLOYED], denominator),
-                _count_with_percent(counts[AlumniProfile.EmploymentStatus.LOST_CONTACT], total),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY], denominator, lang),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY], denominator, lang),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.SELF_EMPLOYED], denominator, lang),
+                _count_with_percent(continuing_count, denominator, lang),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.UNEMPLOYED], denominator, lang),
+                _count_with_percent(counts[AlumniProfile.EmploymentStatus.LOST_CONTACT], total, lang),
             ])
         return rows
 
-    def _summary_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
-        data = [[self._p(value, styles, center=True) for value in self._summary_headers()]]
-        for row in self._summary_row_values(profiles):
+    def _summary_table(self, profiles: Iterable[AlumniProfile], styles, lang: str) -> Table:
+        data = [[self._p(value, styles, center=True) for value in self._summary_headers(lang)]]
+        for row in self._summary_row_values(profiles, lang):
             data.append([self._p(value, styles, center=True) for value in row])
 
         table = Table(
@@ -530,10 +784,11 @@ class EmploymentReportExportView(APIView):
     def _text_value(self, value) -> str:
         return "—" if value in (None, "") else str(value)
 
-    def _pdf_response(self, profiles: list[AlumniProfile], selection_description: str) -> HttpResponse:
+    def _pdf_response(self, profiles: list[AlumniProfile], selection_description: str, lang: str) -> HttpResponse:
         buffer = BytesIO()
         font_name = self._register_font()
         styles = self._styles(font_name)
+        labels = _texts(lang)
 
         doc = SimpleDocTemplate(
             buffer,
@@ -542,31 +797,31 @@ class EmploymentReportExportView(APIView):
             rightMargin=4 * mm,
             topMargin=6 * mm,
             bottomMargin=6 * mm,
-            title="employment_report",
+            title=labels["title"],
         )
         story = [
-            Paragraph(REPORT_TITLE, styles["ReportTitle"]),
-            Paragraph(REPORT_SUBTITLE, styles["ReportSubTitle"]),
+            Paragraph(labels["title"], styles["ReportTitle"]),
+            Paragraph(labels["subtitle"], styles["ReportSubTitle"]),
             Paragraph(selection_description, styles["ReportMeta"]),
-            Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["ReportSection"]),
-            self._graduates_table(profiles, styles),
+            Paragraph(labels["section_1"], styles["ReportSection"]),
+            self._graduates_table(profiles, styles, lang),
             PageBreak(),
-            Paragraph(REPORT_TITLE, styles["ReportTitle"]),
-            Paragraph(REPORT_SUBTITLE, styles["ReportSubTitle"]),
+            Paragraph(labels["title"], styles["ReportTitle"]),
+            Paragraph(labels["subtitle"], styles["ReportSubTitle"]),
             Paragraph(selection_description, styles["ReportMeta"]),
-            Paragraph("Раздел 2. Сводные показатели трудоустройства", styles["ReportSection"]),
-            self._summary_table(profiles, styles),
+            Paragraph(labels["section_2"], styles["ReportSection"]),
+            self._summary_table(profiles, styles, lang),
             Spacer(1, 12 * mm),
-            Paragraph("Зав. кафедрой «ИСТ им. акад. А. Жайнакова» ____________________", styles["Normal"]),
+            Paragraph(labels["chair_signature"], styles["Normal"]),
         ]
 
         doc.build(story)
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{self._report_filename("pdf")}"'
+        response["Content-Disposition"] = self._attachment_header(self._report_filename("pdf", lang))
         return response
 
-    def _docx_response(self, profiles: list[AlumniProfile], selection_description: str) -> HttpResponse:
+    def _docx_response(self, profiles: list[AlumniProfile], selection_description: str, lang: str) -> HttpResponse:
         try:
             from docx import Document
             from docx.enum.section import WD_ORIENT
@@ -695,6 +950,8 @@ class EmploymentReportExportView(APIView):
             run.font.size = Pt(size)
             run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
 
+        labels = _texts(lang)
+
         document = Document()
         set_landscape(document.sections[0])
         normal_style = document.styles["Normal"]
@@ -702,10 +959,10 @@ class EmploymentReportExportView(APIView):
         normal_style.font.size = Pt(8)
         normal_style.element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
 
-        add_centered_paragraph(REPORT_TITLE, size=12, bold=True, spacing_after=1)
-        add_centered_paragraph(REPORT_SUBTITLE, size=9, spacing_after=1)
+        add_centered_paragraph(labels["title"], size=12, bold=True, spacing_after=1)
+        add_centered_paragraph(labels["subtitle"], size=9, spacing_after=1)
         add_centered_paragraph(selection_description, size=8, spacing_after=4)
-        add_centered_paragraph("Раздел 1. Реестр выпускников и сведения о занятости", size=10.5, bold=True, spacing_after=4)
+        add_centered_paragraph(labels["section_1"], size=10.5, bold=True, spacing_after=4)
 
         graduate_widths = [1.15, 4.2, 0.9, 1.2, 3.25, 2.85, 1.65, 3.2, 5.15, 3.6]
         graduate_table = document.add_table(rows=2, cols=10)
@@ -728,21 +985,21 @@ class EmploymentReportExportView(APIView):
         header_0[8].merge(header_1[8])
         header_0[9].merge(header_1[9])
 
-        set_cell_text(graduate_table.cell(0, 0), "№", bold=True, align_center=True, font_size=7.6, vertical_middle=True)
-        set_cell_text(graduate_table.cell(0, 1), "ФИО", bold=True, align_center=True, font_size=7.6, vertical_middle=True)
-        set_cell_text(graduate_table.cell(0, 2), "Год окончания", bold=True, align_center=True, font_size=7.2, vertical_middle=True, rotate=True)
-        set_cell_text(graduate_table.cell(0, 3), "Специальность по диплому", bold=True, align_center=True, font_size=6.8, vertical_middle=True, rotate=True)
-        set_cell_text(graduate_table.cell(0, 4), "Трудоустройство", bold=True, align_center=True, font_size=7.6, vertical_middle=True)
-        set_cell_text(graduate_table.cell(1, 4), "по спец.\n(указать должность, место работы)", bold=True, align_center=True, font_size=6.8, vertical_middle=True)
-        set_cell_text(graduate_table.cell(1, 5), "не по спец.\n/ самозанятость", bold=True, align_center=True, font_size=6.8, vertical_middle=True)
-        set_cell_text(graduate_table.cell(1, 6), "не работает\n/ неизвестно", bold=True, align_center=True, font_size=6.8, vertical_middle=True)
-        set_cell_text(graduate_table.cell(0, 7), "Продолжил обучение\nУказать где именно", bold=True, align_center=True, font_size=7.0, vertical_middle=True)
-        set_cell_text(graduate_table.cell(0, 8), "Что из преподававшегося на факультете наиболее полезно в вашей сегодняшней работе?", bold=True, align_center=True, font_size=6.6, vertical_middle=True)
-        set_cell_text(graduate_table.cell(0, 9), "Что пришлось изучать самостоятельно?", bold=True, align_center=True, font_size=6.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 0), labels["number"], bold=True, align_center=True, font_size=7.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 1), labels["full_name"], bold=True, align_center=True, font_size=7.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 2), labels["year_graduation"], bold=True, align_center=True, font_size=7.2, vertical_middle=True, rotate=True)
+        set_cell_text(graduate_table.cell(0, 3), labels["specialty_diploma"], bold=True, align_center=True, font_size=6.8, vertical_middle=True, rotate=True)
+        set_cell_text(graduate_table.cell(0, 4), labels["employment"], bold=True, align_center=True, font_size=7.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(1, 4), labels["employed_specialty_header"], bold=True, align_center=True, font_size=6.8, vertical_middle=True)
+        set_cell_text(graduate_table.cell(1, 5), labels["not_specialty_self_employed_header"], bold=True, align_center=True, font_size=6.8, vertical_middle=True)
+        set_cell_text(graduate_table.cell(1, 6), labels["not_working_unknown_header"], bold=True, align_center=True, font_size=6.8, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 7), labels["continued_education_where"], bold=True, align_center=True, font_size=7.0, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 8), labels["useful_question"], bold=True, align_center=True, font_size=6.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 9), labels["self_study_question"], bold=True, align_center=True, font_size=6.6, vertical_middle=True)
 
         for index, profile in enumerate(profiles, start=1):
             cells = graduate_table.add_row().cells
-            for column_index, value in enumerate(self._pdf_profile_row_values(profile, index)):
+            for column_index, value in enumerate(self._pdf_profile_row_values(profile, index, lang)):
                 set_cell_width(cells[column_index], graduate_widths[column_index])
                 set_cell_text(
                     cells[column_index],
@@ -753,13 +1010,13 @@ class EmploymentReportExportView(APIView):
                 )
 
         document.add_page_break()
-        add_centered_paragraph(REPORT_TITLE, size=12, bold=True, spacing_after=1)
-        add_centered_paragraph(REPORT_SUBTITLE, size=9, spacing_after=1)
+        add_centered_paragraph(labels["title"], size=12, bold=True, spacing_after=1)
+        add_centered_paragraph(labels["subtitle"], size=9, spacing_after=1)
         add_centered_paragraph(selection_description, size=8, spacing_after=4)
-        add_centered_paragraph("Раздел 2. Сводные показатели трудоустройства", size=10.5, bold=True, spacing_after=4)
+        add_centered_paragraph(labels["section_2"], size=10.5, bold=True, spacing_after=4)
 
-        summary_headers = self._summary_headers()
-        summary_rows = self._summary_row_values(profiles)
+        summary_headers = self._summary_headers(lang)
+        summary_rows = self._summary_row_values(profiles, lang)
         summary_widths = [1.7, 4.2, 2.6, 1.7, 1.7, 2.45, 2.55, 2.05, 2.35, 2.05, 2.05]
         summary_table = document.add_table(rows=1, cols=len(summary_headers))
         summary_table.style = "Table Grid"
@@ -777,7 +1034,7 @@ class EmploymentReportExportView(APIView):
 
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.space_before = Pt(18)
-        run = paragraph.add_run("Зав. кафедрой «ИСТ им. акад. А. Жайнакова» ____________________")
+        run = paragraph.add_run(labels["chair_signature"])
         run.font.name = "Times New Roman"
         run.font.size = Pt(9)
         run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
@@ -789,10 +1046,10 @@ class EmploymentReportExportView(APIView):
             buffer.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
-        response["Content-Disposition"] = f'attachment; filename="{self._report_filename("docx")}"'
+        response["Content-Disposition"] = self._attachment_header(self._report_filename("docx", lang))
         return response
 
-    def _xlsx_response(self, profiles: list[AlumniProfile], selection_description: str) -> HttpResponse:
+    def _xlsx_response(self, profiles: list[AlumniProfile], selection_description: str, lang: str) -> HttpResponse:
         try:
             from openpyxl import Workbook
             from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -803,6 +1060,7 @@ class EmploymentReportExportView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        labels = _texts(lang)
         workbook = Workbook()
         border_side = Side(style="thin", color="111827")
         border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
@@ -813,11 +1071,11 @@ class EmploymentReportExportView(APIView):
 
         def prepare_sheet(sheet, title: str, headers: list[str], rows: list[list[str | int | None]], widths: list[int]):
             sheet.title = title
-            sheet.append([REPORT_TITLE])
+            sheet.append([labels["title"]])
             sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
             sheet.cell(1, 1).font = title_font
             sheet.cell(1, 1).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            sheet.append([REPORT_SUBTITLE])
+            sheet.append([labels["subtitle"]])
             sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
             sheet.cell(2, 1).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             sheet.append([selection_description])
@@ -844,22 +1102,22 @@ class EmploymentReportExportView(APIView):
             sheet.row_dimensions[2].height = 28
             sheet.row_dimensions[3].height = 24
 
-        graduate_headers = self._graduate_headers()
-        graduate_rows = [self._profile_row_values(profile, index) for index, profile in enumerate(profiles, start=1)]
+        graduate_headers = self._graduate_headers(lang)
+        graduate_rows = [self._profile_row_values(profile, index, lang) for index, profile in enumerate(profiles, start=1)]
         prepare_sheet(
             workbook.active,
-            "Выпускники",
+            labels["sheet_graduates"],
             graduate_headers,
             graduate_rows,
             [7, 30, 18, 14, 24, 36, 34, 24, 30, 40, 34],
         )
 
-        summary_headers = self._summary_headers()
-        summary_rows = self._summary_row_values(profiles)
-        summary_sheet = workbook.create_sheet("Сводка")
+        summary_headers = self._summary_headers(lang)
+        summary_rows = self._summary_row_values(profiles, lang)
+        summary_sheet = workbook.create_sheet(labels["sheet_summary"])
         prepare_sheet(
             summary_sheet,
-            "Сводка",
+            labels["sheet_summary"],
             summary_headers,
             summary_rows,
             [14, 40, 24, 20, 20, 22, 24, 20, 24, 20, 20],
@@ -872,7 +1130,7 @@ class EmploymentReportExportView(APIView):
             buffer.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        response["Content-Disposition"] = f'attachment; filename="{self._report_filename("xlsx")}"'
+        response["Content-Disposition"] = self._attachment_header(self._report_filename("xlsx", lang))
         return response
 
     def _graduate_table_style(self) -> TableStyle:
