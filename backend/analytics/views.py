@@ -565,7 +565,7 @@ class EmploymentReportExportView(APIView):
         try:
             from docx import Document
             from docx.enum.section import WD_ORIENT
-            from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+            from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE
             from docx.enum.text import WD_ALIGN_PARAGRAPH
             from docx.oxml import OxmlElement
             from docx.oxml.ns import qn
@@ -581,19 +581,10 @@ class EmploymentReportExportView(APIView):
             section.page_width, section.page_height = section.page_height, section.page_width
             section.left_margin = Cm(0.7)
             section.right_margin = Cm(0.7)
-            section.top_margin = Cm(0.8)
-            section.bottom_margin = Cm(0.8)
+            section.top_margin = Cm(0.7)
+            section.bottom_margin = Cm(0.7)
 
-        def set_cell_text(cell, value, bold: bool = False, align_center: bool = False):
-            cell.text = ""
-            paragraph = cell.paragraphs[0]
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if align_center else WD_ALIGN_PARAGRAPH.LEFT
-            run = paragraph.add_run(self._text_value(value))
-            run.bold = bold
-            run.font.name = "Times New Roman"
-            run.font.size = Pt(7.4 if not bold else 8)
-            run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
-            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
+        def set_cell_margins(cell, margin_twips: str = "45") -> None:
             tc_pr = cell._tc.get_or_add_tcPr()
             tc_mar = tc_pr.first_child_found_in("w:tcMar")
             if tc_mar is None:
@@ -604,54 +595,187 @@ class EmploymentReportExportView(APIView):
                 if margin is None:
                     margin = OxmlElement(f"w:{margin_name}")
                     tc_mar.append(margin)
-                margin.set(qn("w:w"), "60")
+                margin.set(qn("w:w"), margin_twips)
                 margin.set(qn("w:type"), "dxa")
 
-        document = Document()
-        set_landscape(document.sections[0])
-        normal_style = document.styles["Normal"]
-        normal_style.font.name = "Times New Roman"
-        normal_style.font.size = Pt(9)
-        normal_style.element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+        def set_cell_width(cell, width_cm: float) -> None:
+            cell.width = Cm(width_cm)
+            tc_pr = cell._tc.get_or_add_tcPr()
+            tc_w = tc_pr.first_child_found_in("w:tcW")
+            if tc_w is None:
+                tc_w = OxmlElement("w:tcW")
+                tc_pr.append(tc_w)
+            tc_w.set(qn("w:w"), str(int(width_cm * 567)))
+            tc_w.set(qn("w:type"), "dxa")
 
-        for text, size, bold in [(REPORT_TITLE, 12, True), (REPORT_SUBTITLE, 9, False), (selection_description, 8, False)]:
+        def set_cell_text_direction(cell, direction: str = "btLr") -> None:
+            tc_pr = cell._tc.get_or_add_tcPr()
+            text_direction = tc_pr.find(qn("w:textDirection"))
+            if text_direction is None:
+                text_direction = OxmlElement("w:textDirection")
+                tc_pr.append(text_direction)
+            text_direction.set(qn("w:val"), direction)
+
+        def set_repeat_header(row) -> None:
+            tr_pr = row._tr.get_or_add_trPr()
+            if tr_pr.find(qn("w:tblHeader")) is None:
+                tbl_header = OxmlElement("w:tblHeader")
+                tbl_header.set(qn("w:val"), "true")
+                tr_pr.append(tbl_header)
+
+        def set_fixed_table_layout(table, width_cm: float | None = None) -> None:
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            table.autofit = False
+            tbl_pr = table._tbl.tblPr
+            tbl_layout = tbl_pr.find(qn("w:tblLayout"))
+            if tbl_layout is None:
+                tbl_layout = OxmlElement("w:tblLayout")
+                tbl_pr.append(tbl_layout)
+            tbl_layout.set(qn("w:type"), "fixed")
+            if width_cm is not None:
+                tbl_w = tbl_pr.find(qn("w:tblW"))
+                if tbl_w is None:
+                    tbl_w = OxmlElement("w:tblW")
+                    tbl_pr.append(tbl_w)
+                tbl_w.set(qn("w:type"), "dxa")
+                tbl_w.set(qn("w:w"), str(int(width_cm * 567)))
+
+        def apply_column_widths(table, widths: list[float]) -> None:
+            for column, width in zip(table.columns, widths):
+                column.width = Cm(width)
+            for row in table.rows:
+                for index, width in enumerate(widths):
+                    set_cell_width(row.cells[index], width)
+
+        def set_row_height(row, height_cm: float, exact: bool = False) -> None:
+            row.height = Cm(height_cm)
+            row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY if exact else WD_ROW_HEIGHT_RULE.AT_LEAST
+
+        def set_cell_text(
+            cell,
+            value,
+            *,
+            bold: bool = False,
+            align_center: bool = False,
+            font_size: float = 7.2,
+            vertical_middle: bool = False,
+            rotate: bool = False,
+        ) -> None:
+            cell.text = ""
+            paragraph = cell.paragraphs[0]
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if align_center else WD_ALIGN_PARAGRAPH.LEFT
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.line_spacing = 1.0
+            for line_index, line in enumerate(self._text_value(value).splitlines() or ["—"]):
+                if line_index:
+                    paragraph.add_run().add_break()
+                run = paragraph.add_run(line)
+                run.bold = bold
+                run.font.name = "Times New Roman"
+                run.font.size = Pt(font_size)
+                run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER if vertical_middle else WD_CELL_VERTICAL_ALIGNMENT.TOP
+            if rotate:
+                set_cell_text_direction(cell)
+            set_cell_margins(cell)
+
+        def add_centered_paragraph(text: str, *, size: float, bold: bool = False, spacing_after: float = 2) -> None:
             paragraph = document.add_paragraph()
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.space_after = Pt(spacing_after)
             run = paragraph.add_run(text)
             run.bold = bold
             run.font.name = "Times New Roman"
             run.font.size = Pt(size)
             run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
 
-        document.add_paragraph("Раздел 1. Реестр выпускников и сведения о занятости").runs[0].bold = True
-        graduate_headers = self._graduate_headers()
-        graduate_rows = [self._profile_row_values(profile, index) for index, profile in enumerate(profiles, start=1)]
-        graduate_table = document.add_table(rows=1, cols=len(graduate_headers))
+        document = Document()
+        set_landscape(document.sections[0])
+        normal_style = document.styles["Normal"]
+        normal_style.font.name = "Times New Roman"
+        normal_style.font.size = Pt(8)
+        normal_style.element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+
+        add_centered_paragraph(REPORT_TITLE, size=12, bold=True, spacing_after=1)
+        add_centered_paragraph(REPORT_SUBTITLE, size=9, spacing_after=1)
+        add_centered_paragraph(selection_description, size=8, spacing_after=4)
+        add_centered_paragraph("Раздел 1. Реестр выпускников и сведения о занятости", size=10.5, bold=True, spacing_after=4)
+
+        graduate_widths = [1.15, 4.2, 0.9, 1.2, 3.25, 2.85, 1.65, 3.2, 5.15, 3.6]
+        graduate_table = document.add_table(rows=2, cols=10)
         graduate_table.style = "Table Grid"
-        graduate_table.autofit = True
-        for cell, header in zip(graduate_table.rows[0].cells, graduate_headers):
-            set_cell_text(cell, header, bold=True, align_center=True)
-        for row in graduate_rows:
+        set_fixed_table_layout(graduate_table, sum(graduate_widths))
+        apply_column_widths(graduate_table, graduate_widths)
+        set_row_height(graduate_table.rows[0], 2.25, exact=True)
+        set_row_height(graduate_table.rows[1], 1.05, exact=True)
+        set_repeat_header(graduate_table.rows[0])
+        set_repeat_header(graduate_table.rows[1])
+
+        header_0 = graduate_table.rows[0].cells
+        header_1 = graduate_table.rows[1].cells
+        header_0[0].merge(header_1[0])
+        header_0[1].merge(header_1[1])
+        header_0[2].merge(header_1[2])
+        header_0[3].merge(header_1[3])
+        header_0[4].merge(header_0[6])
+        header_0[7].merge(header_1[7])
+        header_0[8].merge(header_1[8])
+        header_0[9].merge(header_1[9])
+
+        set_cell_text(graduate_table.cell(0, 0), "№", bold=True, align_center=True, font_size=7.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 1), "ФИО", bold=True, align_center=True, font_size=7.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 2), "Год окончания", bold=True, align_center=True, font_size=7.2, vertical_middle=True, rotate=True)
+        set_cell_text(graduate_table.cell(0, 3), "Специальность по диплому", bold=True, align_center=True, font_size=6.8, vertical_middle=True, rotate=True)
+        set_cell_text(graduate_table.cell(0, 4), "Трудоустройство", bold=True, align_center=True, font_size=7.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(1, 4), "по спец.\n(указать должность, место работы)", bold=True, align_center=True, font_size=6.8, vertical_middle=True)
+        set_cell_text(graduate_table.cell(1, 5), "не по спец.\n/ самозанятость", bold=True, align_center=True, font_size=6.8, vertical_middle=True)
+        set_cell_text(graduate_table.cell(1, 6), "не работает\n/ неизвестно", bold=True, align_center=True, font_size=6.8, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 7), "Продолжил обучение\nУказать где именно", bold=True, align_center=True, font_size=7.0, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 8), "Что из преподававшегося на факультете наиболее полезно в вашей сегодняшней работе?", bold=True, align_center=True, font_size=6.6, vertical_middle=True)
+        set_cell_text(graduate_table.cell(0, 9), "Что пришлось изучать самостоятельно?", bold=True, align_center=True, font_size=6.6, vertical_middle=True)
+
+        for index, profile in enumerate(profiles, start=1):
             cells = graduate_table.add_row().cells
-            for cell, value in zip(cells, row):
-                set_cell_text(cell, value)
+            for column_index, value in enumerate(self._pdf_profile_row_values(profile, index)):
+                set_cell_width(cells[column_index], graduate_widths[column_index])
+                set_cell_text(
+                    cells[column_index],
+                    value,
+                    align_center=column_index in (0, 2, 3),
+                    font_size=6.7,
+                    vertical_middle=column_index in (0, 2, 3),
+                )
 
         document.add_page_break()
-        document.add_paragraph("Раздел 2. Сводные показатели трудоустройства").runs[0].bold = True
+        add_centered_paragraph(REPORT_TITLE, size=12, bold=True, spacing_after=1)
+        add_centered_paragraph(REPORT_SUBTITLE, size=9, spacing_after=1)
+        add_centered_paragraph(selection_description, size=8, spacing_after=4)
+        add_centered_paragraph("Раздел 2. Сводные показатели трудоустройства", size=10.5, bold=True, spacing_after=4)
+
         summary_headers = self._summary_headers()
         summary_rows = self._summary_row_values(profiles)
+        summary_widths = [1.7, 4.2, 2.6, 1.7, 1.7, 2.45, 2.55, 2.05, 2.35, 2.05, 2.05]
         summary_table = document.add_table(rows=1, cols=len(summary_headers))
         summary_table.style = "Table Grid"
-        summary_table.autofit = True
-        for cell, header in zip(summary_table.rows[0].cells, summary_headers):
-            set_cell_text(cell, header, bold=True, align_center=True)
+        set_fixed_table_layout(summary_table, sum(summary_widths))
+        apply_column_widths(summary_table, summary_widths)
+        set_repeat_header(summary_table.rows[0])
+        for cell, header, width in zip(summary_table.rows[0].cells, summary_headers, summary_widths):
+            set_cell_width(cell, width)
+            set_cell_text(cell, header, bold=True, align_center=True, font_size=6.7, vertical_middle=True)
         for row in summary_rows:
             cells = summary_table.add_row().cells
-            for cell, value in zip(cells, row):
-                set_cell_text(cell, value, align_center=False)
+            for column_index, value in enumerate(row):
+                set_cell_width(cells[column_index], summary_widths[column_index])
+                set_cell_text(cells[column_index], value, align_center=True, font_size=6.7, vertical_middle=True)
 
-        document.add_paragraph("")
-        document.add_paragraph("Зав. кафедрой «ИСТ им. акад. А. Жайнакова» ____________________")
+        paragraph = document.add_paragraph()
+        paragraph.paragraph_format.space_before = Pt(18)
+        run = paragraph.add_run("Зав. кафедрой «ИСТ им. акад. А. Жайнакова» ____________________")
+        run.font.name = "Times New Roman"
+        run.font.size = Pt(9)
+        run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
 
         buffer = BytesIO()
         document.save(buffer)
