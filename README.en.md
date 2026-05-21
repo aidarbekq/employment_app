@@ -18,6 +18,8 @@ employment_app-main/
 ├── backend/                 # Django REST API
 │   ├── manage.py
 │   ├── requirements.txt
+│   ├── requirements-dev.txt
+│   ├── pyproject.toml       # ruff/black/mypy/pytest/bandit settings
 │   ├── employment_system/   # Django settings
 │   ├── users/               # users and seed command
 │   ├── alumni/              # graduate profiles
@@ -64,6 +66,7 @@ Containers:
 
 ```text
 db       PostgreSQL
+migrate  one-off migrate + collectstatic service
 backend  Django + Gunicorn
 nginx    React build + reverse proxy
 ```
@@ -119,6 +122,21 @@ pip install -r requirements.txt
 DB_HOST=localhost python manage.py migrate
 DB_HOST=localhost python manage.py seed --clear
 DB_HOST=localhost python manage.py runserver
+```
+
+
+## Backend quality tools
+
+The backend now has `pyproject.toml` for formatting, linting, type checking, tests, and security scan configuration. Runtime dependencies remain in `backend/requirements.txt`; development tools are kept in `backend/requirements-dev.txt` so the production image does not install dev-only packages.
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+ruff check .
+black --check .
+mypy .
+pytest
+bandit -c pyproject.toml -r .
 ```
 
 ## Local frontend development
@@ -206,6 +224,7 @@ If a group filter is selected, the PDF is generated only for that group. If no f
 Copy `.env.example` to `.env`:
 
 ```dotenv
+DJANGO_ENVIRONMENT=development
 SECRET_KEY=change-me-to-a-generated-64-character-random-secret-key-before-deploy
 DEBUG=False
 ENABLE_API_DOCS=True
@@ -220,6 +239,16 @@ SECURE_HSTS_PRELOAD=False
 SESSION_COOKIE_SECURE=False
 CSRF_COOKIE_SECURE=False
 SECURE_REFERRER_POLICY=same-origin
+RESUME_MAX_UPLOAD_SIZE=5242880
+PARTNER_LOGO_MAX_UPLOAD_SIZE=2097152
+MEDIA_STORAGE_BACKEND=local
+MEDIA_URL=/media/
+MEDIA_ROOT=media
+AWS_STORAGE_BUCKET_NAME=
+AWS_S3_REGION_NAME=auto
+AWS_S3_ENDPOINT_URL=
+AWS_S3_CUSTOM_DOMAIN=
+AWS_QUERYSTRING_AUTH=True
 
 API_PAGE_SIZE=10
 DRF_ANON_THROTTLE_RATE=100/hour
@@ -232,6 +261,7 @@ JWT_REFRESH_TOKEN_DAYS=7
 
 GUNICORN_WORKERS=3
 GUNICORN_TIMEOUT=60
+DJANGO_LOG_LEVEL=INFO
 
 DB_NAME=employment_db
 DB_USER=employment_user
@@ -243,6 +273,28 @@ DB_CONN_HEALTH_CHECKS=True
 ```
 
 Do not commit `.env`.
+
+
+## Media files in production
+
+Resume uploads and partner logos use Django storage. By default the project uses local `MEDIA_ROOT` stored in the Docker named volume `media_data`. This is fine for a single-server deployment or an internal demo stand.
+
+- resumes are stored in `media_data`, but direct `/media/resumes/` access is blocked in Nginx; downloads go through an authenticated API endpoint;
+- partner logos are stored in `media_data` and served publicly from `/media/partners/`;
+- PDF/DOCX/XLSX reports are generated on demand and are not persisted on disk.
+
+For public production with multiple servers, enable S3-compatible storage:
+
+```dotenv
+MEDIA_STORAGE_BACKEND=s3
+AWS_STORAGE_BUCKET_NAME=your-bucket
+AWS_S3_REGION_NAME=auto
+AWS_S3_ENDPOINT_URL=https://your-s3-endpoint
+AWS_S3_CUSTOM_DOMAIN=cdn.example.com
+AWS_QUERYSTRING_AUTH=True
+```
+
+Upload validation is enabled: resumes accept only PDF/DOC/DOCX, and partner logos accept only JPG/PNG/WEBP.
 
 ## Healthcheck
 
@@ -262,10 +314,12 @@ If PostgreSQL is unavailable, the endpoint returns HTTP `503`.
 
 ## Production recommendations
 
+- set `DJANGO_ENVIRONMENT=production`;
 - replace demo passwords and `SECRET_KEY`;
 - move secrets to a protected secrets manager;
 - configure HTTPS, production CORS/CSRF origins, and enable `SECURE_SSL_REDIRECT=True`, `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`;
 - enable HSTS (`SECURE_HSTS_SECONDS`) only after HTTPS is stable on the production domain;
 - disable public API documentation with `ENABLE_API_DOCS=False` when it is not needed;
-- add CI for `python manage.py check`, `npm run lint`, `npx tsc -b`, `npm audit`, and `npm run build`;
+- run migrations as a separate job/service before backend startup, as `docker-compose.yml` does through the `migrate` service;
+- add CI for `python manage.py check`, `python manage.py check --deploy`, `ruff check`, `black --check`, `npm run lint`, `npx tsc -b`, `npm audit`, and `npm run build`;
 - keep dependencies updated and check bundle size after adding large pages.

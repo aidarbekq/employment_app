@@ -1,0 +1,54 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["."]
+exclude = [
+  "migrations",
+  ".venv",
+  "venv",
+  "staticfiles",
+  "media",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DJ", "SIM"]
+ignore = [
+  "DJ001",  # Nullable string fields are already used intentionally in existing models.
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["alumni", "analytics", "employers", "employment_system", "users", "vacancies"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+exclude = '''
+/(\.venv|venv|migrations|staticfiles|media)/
+'''
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "employment_system.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "--reuse-db --strict-markers"
+testpaths = ["alumni", "analytics", "employers", "users", "vacancies"]
+
+[tool.pytest_env]
+SECRET_KEY = "test-secret-key-for-local-pytest-only-not-for-production"
+DEBUG = "False"
+DB_HOST = "localhost"
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+ignore_missing_imports = true
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+exclude = "(migrations|media|staticfiles|venv|.venv)"
+
+[tool.django-stubs]
+django_settings_module = "employment_system.settings"
+
+[tool.bandit]
+exclude_dirs = ["migrations", "tests.py", ".venv", "venv"]
+skips = ["B101"]
