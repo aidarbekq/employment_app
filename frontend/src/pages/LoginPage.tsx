@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { authStorage } from "@/services/api";
 import { Eye, EyeOff, Mail, Lock, GraduationCap, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/common/Card";
 import Button from "@/components/common/Button";
@@ -34,7 +35,7 @@ const LoginPage: React.FC = () => {
     try {
       await login(username, password);
 
-      const role = localStorage.getItem("role") || "ALUMNI";
+      const role = authStorage.getRole() || "ALUMNI";
       if (role === "ADMIN") navigate("/admin/dashboard");
       else if (role === "EMPLOYER") navigate("/employer/dashboard");
       else navigate("/graduate/profile");

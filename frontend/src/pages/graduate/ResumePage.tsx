@@ -72,12 +72,11 @@ const ResumePage: React.FC = () => {
     formData.append('resume', file);
 
     try {
-      const response = await api.put(`alumni/alumni-profiles/${profileId}/`, formData, {
+      await api.put(`alumni/alumni-profiles/${profileId}/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       toast.success(t('resume.uploadSuccess'));
       setFile(null);
-      setResumeUrl((response.data as AlumniProfileSummary).resume ?? null);
       await fetchProfile();
     } catch {
       toast.error(t('resume.uploadError'));
