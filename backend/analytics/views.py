@@ -221,8 +221,8 @@ class EmploymentReportExportView(APIView):
         base.add(ParagraphStyle(name="ReportSubTitle", fontName=font_name, fontSize=8.5, leading=10.5, alignment=TA_CENTER, spaceAfter=1.5 * mm))
         base.add(ParagraphStyle(name="ReportMeta", fontName=font_name, fontSize=8, leading=10, alignment=TA_CENTER, spaceAfter=3 * mm))
         base.add(ParagraphStyle(name="ReportSection", fontName=font_name, fontSize=10.5, leading=12.5, alignment=TA_CENTER, spaceBefore=1 * mm, spaceAfter=3 * mm))
-        base.add(ParagraphStyle(name="Cell", fontName=font_name, fontSize=6.2, leading=7.1, alignment=TA_LEFT))
-        base.add(ParagraphStyle(name="CellCenter", fontName=font_name, fontSize=6.2, leading=7.1, alignment=TA_CENTER))
+        base.add(ParagraphStyle(name="Cell", fontName=font_name, fontSize=5.8, leading=6.7, alignment=TA_LEFT))
+        base.add(ParagraphStyle(name="CellCenter", fontName=font_name, fontSize=5.8, leading=6.7, alignment=TA_CENTER))
         base["Normal"].fontName = font_name
         base["Normal"].fontSize = 8
         base["Normal"].leading = 10
@@ -288,6 +288,75 @@ class EmploymentReportExportView(APIView):
             profile.self_study_topics or "—",
         ]
 
+    def _graduate_main_headers(self) -> list[str]:
+        return [
+            "№",
+            "ФИО",
+            "Группа",
+            "Год",
+            "Специальность",
+            "По специальности",
+            "Не по специальности / самозанятость",
+            "Не работает / неизвестно",
+            "Продолжил обучение",
+        ]
+
+    def _profile_main_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
+        status_value = profile.employment_status
+        work = self._work_text(profile)
+        return [
+            index,
+            self._full_name(profile),
+            profile.academic_group.name if profile.academic_group else "—",
+            profile.graduation_year or "—",
+            profile.specialty or self._direction_profile_text(profile),
+            work if status_value == AlumniProfile.EmploymentStatus.EMPLOYED_SPECIALTY else "—",
+            work if status_value in (AlumniProfile.EmploymentStatus.EMPLOYED_NOT_SPECIALTY, AlumniProfile.EmploymentStatus.SELF_EMPLOYED) else "—",
+            self._not_working_text(profile),
+            profile.continuing_education_place
+            if status_value == AlumniProfile.EmploymentStatus.CONTINUING_EDUCATION or profile.continuing_education_place
+            else "—",
+        ]
+
+    def _survey_headers(self) -> list[str]:
+        return ["№", "ФИО", "Полезно в работе", "Изучал самостоятельно"]
+
+    def _profile_survey_row_values(self, profile: AlumniProfile, index: int) -> list[str | int | None]:
+        return [
+            index,
+            self._full_name(profile),
+            profile.useful_subjects or "—",
+            profile.self_study_topics or "—",
+        ]
+
+    def _graduates_main_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
+        data = [[self._p(value, styles, center=True) for value in self._graduate_main_headers()]]
+        for index, profile in enumerate(profiles, start=1):
+            row = self._profile_main_row_values(profile, index)
+            data.append([self._p(value, styles, center=column_index in (0, 2, 3, 4)) for column_index, value in enumerate(row)])
+
+        table = Table(
+            data,
+            repeatRows=1,
+            colWidths=[8 * mm, 36 * mm, 21 * mm, 13 * mm, 23 * mm, 47 * mm, 44 * mm, 31 * mm, 50 * mm],
+        )
+        table.setStyle(self._table_style())
+        return table
+
+    def _survey_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
+        data = [[self._p(value, styles, center=True) for value in self._survey_headers()]]
+        for index, profile in enumerate(profiles, start=1):
+            row = self._profile_survey_row_values(profile, index)
+            data.append([self._p(value, styles, center=column_index == 0) for column_index, value in enumerate(row)])
+
+        table = Table(
+            data,
+            repeatRows=1,
+            colWidths=[8 * mm, 48 * mm, 112 * mm, 105 * mm],
+        )
+        table.setStyle(self._table_style())
+        return table
+
     def _graduates_table(self, profiles: Iterable[AlumniProfile], styles) -> Table:
         data = [[self._p(value, styles, center=True) for value in self._graduate_headers()]]
         for index, profile in enumerate(profiles, start=1):
@@ -297,7 +366,7 @@ class EmploymentReportExportView(APIView):
         table = Table(
             data,
             repeatRows=1,
-            colWidths=[8 * mm, 35 * mm, 21 * mm, 16 * mm, 24 * mm, 36 * mm, 34 * mm, 25 * mm, 29 * mm, 38 * mm, 34 * mm],
+            colWidths=[7 * mm, 30 * mm, 19 * mm, 13 * mm, 22 * mm, 31 * mm, 29 * mm, 21 * mm, 25 * mm, 37 * mm, 30 * mm],
         )
         table.setStyle(self._table_style())
         return table
@@ -365,7 +434,7 @@ class EmploymentReportExportView(APIView):
         table = Table(
             data,
             repeatRows=1,
-            colWidths=[20 * mm, 54 * mm, 31 * mm, 22 * mm, 22 * mm, 28 * mm, 29 * mm, 25 * mm, 29 * mm, 25 * mm, 24 * mm],
+            colWidths=[18 * mm, 45 * mm, 28 * mm, 18 * mm, 18 * mm, 26 * mm, 27 * mm, 22 * mm, 25 * mm, 22 * mm, 22 * mm],
         )
         table.setStyle(self._table_style())
         return table
@@ -381,10 +450,10 @@ class EmploymentReportExportView(APIView):
         doc = SimpleDocTemplate(
             buffer,
             pagesize=landscape(A4),
-            leftMargin=8 * mm,
-            rightMargin=8 * mm,
-            topMargin=8 * mm,
-            bottomMargin=8 * mm,
+            leftMargin=6 * mm,
+            rightMargin=6 * mm,
+            topMargin=7 * mm,
+            bottomMargin=7 * mm,
             title="employment_report",
         )
         story = [
@@ -392,7 +461,11 @@ class EmploymentReportExportView(APIView):
             Paragraph(REPORT_SUBTITLE, styles["ReportSubTitle"]),
             Paragraph(selection_description, styles["ReportMeta"]),
             Paragraph("Раздел 1. Реестр выпускников и сведения о занятости", styles["ReportSection"]),
-            self._graduates_table(profiles, styles),
+            Paragraph("1.1. Основные сведения", styles["Normal"]),
+            self._graduates_main_table(profiles, styles),
+            Spacer(1, 4 * mm),
+            Paragraph("1.2. Анкетные сведения", styles["Normal"]),
+            self._survey_table(profiles, styles),
             PageBreak(),
             Paragraph(REPORT_TITLE, styles["ReportTitle"]),
             Paragraph(REPORT_SUBTITLE, styles["ReportSubTitle"]),
@@ -596,7 +669,7 @@ class EmploymentReportExportView(APIView):
 
     def _table_style(self) -> TableStyle:
         return TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.35, colors.black),
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#374151")),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("ALIGN", (0, 0), (-1, 0), "CENTER"),
             ("LEFTPADDING", (0, 0), (-1, -1), 2),

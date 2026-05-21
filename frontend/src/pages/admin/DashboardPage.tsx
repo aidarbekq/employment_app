@@ -6,6 +6,7 @@ import ExportMenu, { ExportFormat } from "@/components/common/ExportMenu";
 import { FilterX, RefreshCw, TrendingUp, Users, UserCheck, Briefcase } from "lucide-react";
 import api from "@/services/api";
 import {
+  Area,
   Bar,
   CartesianGrid,
   Cell,
@@ -184,11 +185,7 @@ const AdminDashboardPage: React.FC = () => {
   const chartData = yearEntries.map(([year, value]) => ({
     year,
     rate: value.percent_employed,
-    employedSpecialty: value.employed_specialty,
-    employedNotSpecialty: value.employed_not_specialty,
-    selfEmployed: value.self_employed,
-    unemployed: value.unemployed,
-    unknown: value.lost_contact,
+    employed: value.employed,
     total: value.total,
     surveyed: value.surveyed,
   }));
@@ -376,6 +373,41 @@ const AdminDashboardPage: React.FC = () => {
         ))}
       </div>
 
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <CardHeader>
+          <CardTitle>{t("admin.statusPieChart")}</CardTitle>
+          <p className="text-sm text-gray-500 mt-1">{t("admin.statusPieChartHint")}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[440px]">
+            {pieData.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 12, right: 24, bottom: 12, left: 24 }}>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="58%"
+                    outerRadius="82%"
+                    paddingAngle={3}
+                    labelLine={false}
+                    label
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={48} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">{t("common.noResults")}</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="overflow-hidden rounded-2xl border-gray-100 shadow-sm">
         <CardHeader>
           <CardTitle>{t("admin.tableTitle")}</CardTitle>
@@ -426,41 +458,6 @@ const AdminDashboardPage: React.FC = () => {
 
       <Card className="rounded-2xl border-gray-100 shadow-sm">
         <CardHeader>
-          <CardTitle>{t("admin.statusPieChart")}</CardTitle>
-          <p className="text-sm text-gray-500 mt-1">{t("admin.statusPieChartHint")}</p>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[440px]">
-            {pieData.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 12, right: 24, bottom: 12, left: 24 }}>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius="58%"
-                    outerRadius="82%"
-                    paddingAngle={3}
-                    labelLine={false}
-                    label
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={entry.name} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={48} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">{t("common.noResults")}</div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
-        <CardHeader>
           <CardTitle>{t("admin.employmentTrend")}</CardTitle>
           <p className="text-sm text-gray-500 mt-1">{t("admin.employmentTrendHint")}</p>
         </CardHeader>
@@ -469,18 +466,23 @@ const AdminDashboardPage: React.FC = () => {
             {chartData.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 24, right: 20, left: 0, bottom: 8 }}>
+                  <defs>
+                    <linearGradient id="employmentRateGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.22} />
+                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="year" tickLine={false} axisLine={false} tickMargin={12} />
                   <YAxis yAxisId="left" allowDecimals={false} tickLine={false} axisLine={false} width={44} />
                   <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} width={50} />
                   <Tooltip
+                    cursor={{ stroke: '#93C5FD', strokeDasharray: '4 4' }}
+                    contentStyle={{ borderRadius: 16, border: '1px solid #E5E7EB', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)' }}
                     formatter={(value: number | string, name: string) => {
                       const labels: Record<string, string> = {
-                        employedSpecialty: t("graduate.employedSpecialty"),
-                        employedNotSpecialty: t("graduate.employedNotSpecialty"),
-                        selfEmployed: t("graduate.selfEmployed"),
-                        unemployed: t("graduate.unemployed"),
-                        unknown: t("graduate.lostContact"),
+                        employed: t("admin.employed"),
+                        surveyed: t("admin.surveyed"),
                         rate: t("admin.employmentRate"),
                       };
                       return [name === "rate" ? `${value}%` : value, labels[name] || name];
@@ -488,20 +490,28 @@ const AdminDashboardPage: React.FC = () => {
                     labelFormatter={(label) => `${t("admin.year")}: ${label}`}
                   />
                   <Legend verticalAlign="bottom" height={36} />
-                  <Bar yAxisId="left" dataKey="employedSpecialty" stackId="employment" name={t("graduate.employedSpecialty")} fill="#2563EB" radius={[0, 0, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="employedNotSpecialty" stackId="employment" name={t("graduate.employedNotSpecialty")} fill="#60A5FA" radius={[0, 0, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="selfEmployed" stackId="employment" name={t("graduate.selfEmployed")} fill="#14B8A6" radius={[0, 0, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="unemployed" stackId="employment" name={t("graduate.unemployed")} fill="#F59E0B" radius={[0, 0, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="unknown" stackId="employment" name={t("graduate.lostContact")} fill="#9CA3AF" radius={[6, 6, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="surveyed" name={t("admin.surveyed")} fill="#DBEAFE" radius={[8, 8, 0, 0]} barSize={34} />
+                  <Bar yAxisId="left" dataKey="employed" name={t("admin.employed")} fill="#2563EB" radius={[8, 8, 0, 0]} barSize={26} />
+                  <Area
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="rate"
+                    name={t("admin.employmentRate")}
+                    stroke="#1D4ED8"
+                    strokeWidth={3}
+                    fill="url(#employmentRateGradient)"
+                    dot={{ r: 4, strokeWidth: 2, fill: '#FFFFFF' }}
+                    activeDot={{ r: 7, strokeWidth: 2 }}
+                  />
                   <Line
                     yAxisId="right"
                     type="monotone"
                     dataKey="rate"
                     name={t("admin.employmentRate")}
-                    stroke="#111827"
+                    stroke="#1D4ED8"
                     strokeWidth={3}
-                    dot={{ r: 4, strokeWidth: 2 }}
-                    activeDot={{ r: 7, strokeWidth: 2 }}
+                    dot={false}
+                    legendType="none"
                   />
                 </ComposedChart>
               </ResponsiveContainer>
